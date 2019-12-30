@@ -73,8 +73,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
 }
 
 int
-tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in,
-          uint8_t *data_out)
+tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in)
 {
 	struct tc_primary_hdr tc_p_hdr;
 	tc_p_hdr.version_num   	= ((pkt_in[0] >> 6) & 0x03);
@@ -95,10 +94,10 @@ tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in,
 		if (tc_tf->mission.seg_hdr_flag) {
 			tc_tf->frame_data.seg_hdr.seq_flag 	= (pkt_in[5] >> 6) & 0x03;
 			tc_tf->frame_data.seg_hdr.map_id 	= pkt_in[5] & 0x3f;
-			memcpy(data_out, &pkt_in[6], tc_tf->frame_data.data_len * sizeof(uint8_t));
+			tc_tf->frame_data.data = &pkt_in[6];
 		}
 	} else {
-		memcpy(data_out, &pkt_in[5], tc_tf->frame_data.data_len * sizeof(uint8_t));
+		tc_tf->frame_data.data = &pkt_in[5];
 	}
 	if (tc_tf->mission.crc_flag == TC_CRC_PRESENT) {
 		tc_tf->crc = pkt_in[tc_p_hdr.frame_len - 1] << 8;
@@ -112,7 +111,7 @@ tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
         uint8_t *data_in, uint16_t length)
 {
 	uint16_t crc = 0;
-	uint16_t packet_len = 0;
+	uint16_t packet_len = tc_tf->mission.fixed_overhead_len + length - 1;
 	pkt_out[0] = ((tc_tf->primary_hdr.version_num & 0x03) << 6);
 	pkt_out[0] |= ((tc_tf->primary_hdr.bypass & 0x01) << 5);
 	pkt_out[0] |= ((tc_tf->primary_hdr.ctrl_cmd & 0x01) << 4);
@@ -123,6 +122,9 @@ tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 
 	pkt_out[2] = ((tc_tf->primary_hdr.vcid & 0x3f) << 2);
 
+	pkt_out[2] |= ((packet_len >> 8) & 0x03);
+	pkt_out[3] = packet_len & 0xff;
+
 	if (tc_tf->primary_hdr.bypass == TYPE_A) {
 		pkt_out[4] = tc_tf->cop_cfg.fop.vs & 0xff;
 	} else {
@@ -130,22 +132,16 @@ tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 	}
 	if (tc_tf->mission.seg_hdr_flag) {
 		pkt_out[5] = ((tc_tf->frame_data.seg_hdr.seq_flag & 0x03) << 6);
-		pkt_out[5] = (tc_tf->frame_data.seg_hdr.map_id & 0x03);
+		pkt_out[5] |= (tc_tf->frame_data.seg_hdr.map_id & 0x03);
 		memcpy(&pkt_out[6], data_in, length * sizeof(uint8_t));
-		packet_len = TC_TRANSFER_FRAME_PRIMARY_HEADER + 1 + length;
 	} else {
 		memcpy(&pkt_out[5], data_in, length * sizeof(uint8_t));
-		packet_len = TC_TRANSFER_FRAME_PRIMARY_HEADER + length;
 	}
 	if (tc_tf->mission.crc_flag == TC_CRC_PRESENT) {
-		crc = calc_crc(pkt_out, packet_len);
-		pkt_out[packet_len] = (crc >> 8) & 0xff;
-		pkt_out[packet_len + 1] = crc & 0xff;
-		packet_len += 2;
+		crc = calc_crc(pkt_out, packet_len - 1);
+		pkt_out[packet_len - 1] = (crc >> 8) & 0xff;
+		pkt_out[packet_len] = crc & 0xff;
 		tc_tf->crc = crc;
 	}
-	packet_len -= 1;
-	pkt_out[2] |= ((packet_len >> 8) & 0x03);
-	pkt_out[3] = packet_len & 0xff;
 	return 0;
 }

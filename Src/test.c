@@ -19,7 +19,6 @@ static void
 test_tm(void **state)
 {
 	uint8_t tx_buf[300];
-	uint8_t rx_buf[300];
 	uint8_t data[100];
 	for (int i = 0; i < 100; i++)
 		data[i] = rand() % 256;
@@ -50,14 +49,14 @@ test_tm(void **state)
 	ret = tm_pack(&tm_tx, tx_buf, data, 100);
 	assert_int_equal(0, ret);
 
-	ret = tm_unpack(&tm_rx, tx_buf, rx_buf);
+	ret = tm_unpack(&tm_rx, tx_buf);
 	assert_int_equal(0, ret);
 
 	assert_int_equal(tm_tx.primary_hdr.ocf, tm_rx.primary_hdr.ocf);
 	assert_int_equal(tm_tx.primary_hdr.mcid.spacecraft_id,
 	                 tm_rx.primary_hdr.mcid.spacecraft_id);
 	assert_int_equal(tm_tx.primary_hdr.vcid, tm_rx.primary_hdr.vcid);
-	assert_memory_equal(data, rx_buf, 100);
+	assert_memory_equal(data, tm_rx.data, 100);
 	assert_int_equal(tm_tx.crc, tm_rx.crc);
 }
 
@@ -65,7 +64,6 @@ static void
 test_tc(void **state)
 {
 	uint8_t tx_buf[300];
-	uint8_t rx_buf[300];
 	uint8_t data[100];
 	uint8_t util[100];
 	for (int i = 0; i < 100; i++)
@@ -99,16 +97,15 @@ test_tc(void **state)
 	ret = tc_pack(&tc_tx, tx_buf, data, 100);
 	assert_int_equal(0, ret);
 
-	ret = tc_unpack(&tc_rx, tx_buf, rx_buf);
+	ret = tc_unpack(&tc_rx, tx_buf);
 	assert_int_equal(0, ret);
 
 	assert_int_equal(tc_tx.primary_hdr.bypass, tc_rx.primary_hdr.bypass);
 	assert_int_equal(tc_tx.primary_hdr.spacecraft_id,
 	                 tc_rx.primary_hdr.spacecraft_id);
 	assert_int_equal(tc_tx.primary_hdr.vcid, tc_rx.primary_hdr.vcid);
-	assert_memory_equal(data, rx_buf, 100);
+	assert_memory_equal(data, tc_rx.frame_data.data, 100);
 	assert_int_equal(tc_tx.crc, tc_rx.crc);
-
 }
 
 int

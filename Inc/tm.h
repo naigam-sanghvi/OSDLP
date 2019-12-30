@@ -117,6 +117,7 @@ struct tm_transfer_frame {
 	struct tm_sec_hdr			secondary_hdr;		/* The secondary header struct*/
 	uint32_t					ocf;				/* The OCF struct */
 	uint16_t					crc;				/* CRC value*/
+	uint8_t					*data;				/* Pointer to FDU*/
 	struct tm_mission_params	mission;			/* Mission specific parameters*/
 };
 
@@ -175,11 +176,8 @@ tm_pack(struct tm_transfer_frame *frame_params, uint8_t *pkt_out,
  * a TM config structure
  * @param frame_params the TM config struct
  * @param pkt_in the received packet buffer
- * @param data_out the buffer where the data
- * portion of the packet will be placed
  */
 int
-tm_unpack(struct tm_transfer_frame *frame_params, uint8_t *pkt_in,
-          uint8_t *data_out);
+tm_unpack(struct tm_transfer_frame *frame_params, uint8_t *pkt_in);
 
 #endif /* INC_TM_H_ */

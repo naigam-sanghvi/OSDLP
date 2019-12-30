@@ -147,8 +147,7 @@ tm_pack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out,
 }
 
 int
-tm_unpack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_in,
-          uint8_t *data_out)
+tm_unpack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_in)
 {
 	tm_tf->primary_hdr.mcid.version_num 	= ((pkt_in[0] >> 6) && 0x03);
 	tm_tf->primary_hdr.mcid.spacecraft_id 	= ((pkt_in[0] & 0x3f) << 4) | ((
@@ -167,9 +166,7 @@ tm_unpack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_in,
 		tm_tf->secondary_hdr.sec_hdr_id.version_num 	= (pkt_in[6] >> 6) & 0x03;
 		tm_tf->secondary_hdr.sec_hdr_id.length			= pkt_in[6] & 0x3f;
 	}
-
-	memcpy(data_out, &pkt_in[tm_tf->mission.header_len],
-	       tm_tf->mission.max_data_len * sizeof(uint8_t));
+	tm_tf->data = &pkt_in[tm_tf->mission.header_len];
 
 	if (tm_tf->primary_hdr.ocf == TM_OCF_PRESENT) {
 		tm_tf->ocf = pkt_in[tm_tf->mission.header_len + tm_tf->mission.max_data_len] <<

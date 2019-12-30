@@ -147,6 +147,14 @@ tc_init(struct tc_transfer_frame *tc_tf,
         tc_ctrl_t ctrl_cmd,
         uint8_t *util_buffer,
         struct cop_params cop);
+/**
+ * Unpacks a received buffer and populates the corresponding fields of
+ * a TC config structure
+ * @param frame_params the TC config struct
+ * @param pkt_in the received packet buffer
+ */
+int
+tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in);
 
 /**
  * Packs a TC structure into a buffer to be transmitted
@@ -154,18 +162,6 @@ tc_init(struct tc_transfer_frame *tc_tf,
  * @param pkt_out the buffer where the packet will be placed
  * @param data_in the input data buffer
  * @param length the length of the data_in buffer
- */
-int
-tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in,
-          uint8_t *data_out);
-
-/**
- * Unpacks a received buffer and populates the corresponding fields of
- * a TC config structure
- * @param frame_params the TC config struct
- * @param pkt_in the received packet buffer
- * @param data_out the buffer where the data
- * portion of the packet will be placed
  */
 int
 tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
