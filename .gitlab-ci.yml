@@ -1,0 +1,22 @@
+image: gcc
+
+stages:
+  - style
+  - test
+
+test:
+  stage: test
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq libcmocka0 libcmocka-dev
+  script:
+    - make all
+    - make test
+style:
+  stage: style
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq astyle git
+  script:
+    - if (test $(astyle --dry-run --options=.astylerc --formatted include/*.h | wc -l) -eq 0); then (exit 0); else (exit 1); fi
+    - if (test $(astyle --dry-run --options=.astylerc --formatted src/*.c | wc -l) -eq 0); then (exit 0); else (exit 1); fi
+    - if (test $(astyle --dry-run --options=.astylerc --formatted test/*.c | wc -l) -eq 0); then (exit 0); else (exit 1); fi
+
