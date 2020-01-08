@@ -1,23 +1,37 @@
-EXE = out
 
-SRC_DIR = Src
-#OBJ_DIR = obj
+LIBNAME    = libosdlp.a
+QA_EXE     = test_osdlp
 
-SRC = $(wildcard $(SRC_DIR)/*.c)
-OBJ = $(SRC:$(SRC_DIR)/%.c=$(SRC_DIR)/%.o)
+SRC_DIR    = src
+QA_SRC_DIR = test
+INCL_DIR   = include
+DEPS       = ${INCL_DIR}/osdlp.h
 
-CPPFLAGS += -IInc
-CFLAGS += -Wall -g
-LDLIBS += -lcmocka
+SRC        = $(wildcard $(SRC_DIR)/*.c)
+OBJ        = $(SRC:$(SRC_DIR)/%.c=$(SRC_DIR)/%.o)
+QA_SRC     = $(QA_SRC_DIR)/test.c
 
-all: $(EXE) clean
+INCLUDES   += -I$(INCL_DIR)
+CFLAGS     += -Wall -g
+LDLIBS     += 
+QA_LDLIBS  += -lcmocka
 
-$(EXE): $(OBJ)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+all: $(QA_EXE)
+
+$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(INCL_DIR)/%.h
+	$(CC) $(INCLUDES) $(CFLAGS) $(LDLIBS) -c -o $@ $<
+
+$(LIBNAME): $(OBJ) $(DEPS)
+	${AR} ru $@ $^
+
+$(QA_EXE): $(LIBNAME) $(QA_SRC)
+	$(CC) $(INCLUDES) $(LDFLAGS) $^ $(QA_LDLIBS) ${LIBNAME} -o $@
 	
-.PHONY: run
-run:
-	./out
+.PHONY: test
+test: $(QA_EXE)
+	./$(QA_EXE)
 
 clean:
 	$(RM) $(OBJ)
+	$(RM) $(QA_EXE)
+	$(RM) $(LIBNAME)

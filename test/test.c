@@ -6,14 +6,13 @@
  */
 
 
-#include "tm.h"
-#include "tc.h"
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
 #include <cmocka.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "osdlp.h"
 
 static void
 test_tm(void **state)

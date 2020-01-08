@@ -1,0 +1,19 @@
+# Ignore eclipse generated binary directories 
+Debug/
+Release/
+build/
+
+*.o
+*.a
+test_osdlp
+
+\.project
+\.cproject
+
+\.mxproject
+
+\.settings/
+
+*Run.cfg
+*Debug.cfg
+

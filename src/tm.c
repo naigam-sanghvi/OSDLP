@@ -17,9 +17,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "tm.h"
+
 #include <stdlib.h>
 #include <string.h>
-#include <tm.h>
 
 int
 tm_init(struct tm_transfer_frame *tm_tf,

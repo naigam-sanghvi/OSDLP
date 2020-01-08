@@ -22,7 +22,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <tc.h>
+
+#include "tc.h"
 
 #define		UNLOCK_CMD		0
 #define		SETVR_BYTE1		0x82

@@ -17,12 +17,13 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_TC_H_
-#define INC_TC_H_
+#ifndef INCLUDE_TC_H_
+#define INCLUDE_TC_H_
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <cop.h>
+
+#include "cop.h"
 
 /**
  * The maximum allowed frame size
@@ -167,4 +168,4 @@ int
 tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
         uint8_t *data_in, uint16_t length);
 
-#endif /* INC_TC_H_ */
+#endif /* INCLUDE_TC_H_ */

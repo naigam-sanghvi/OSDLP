@@ -17,12 +17,14 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "tc.h"
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <tc.h>
-#include <crc.h>
-#include <cop.h>
+
+#include "../include/cop.h"
+#include "../include/crc.h"
 
 #define	TC_TRANSFER_FRAME_PRIMARY_HEADER		5
 
