@@ -17,15 +17,21 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "test.h"
+#ifndef TEST_TEST_H_
+#define TEST_TEST_H_
 
-int
-main()
-{
-	const struct CMUnitTest tests[] = {
-		cmocka_unit_test(test_tm),
-		cmocka_unit_test(test_tc),
-	};
+#include "osdlp.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <cmocka.h>
 
-	return cmocka_run_group_tests(tests, NULL, NULL);
-}
+void
+test_tm(void **state);
+
+void
+test_tc(void **state);
+
+#endif /* TEST_TEST_H_ */
