@@ -7,10 +7,11 @@ stages:
 test:
   stage: test
   before_script:
-    - apt-get update -qq && apt-get install -y -qq libcmocka0 libcmocka-dev
+    - apt-get update -qq && apt-get install -y -qq libcmocka0 libcmocka-dev gcovr
   script:
     - make all
     - make test
+    - make coverage
 style:
   stage: style
   before_script:

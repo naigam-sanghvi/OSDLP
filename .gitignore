@@ -6,6 +6,9 @@ build/
 *.o
 *.a
 test_osdlp
+*.gcda
+*.gcno
+*.gcov
 
 \.project
 \.cproject
