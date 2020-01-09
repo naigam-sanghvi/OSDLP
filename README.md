@@ -1,4 +1,6 @@
 # Open Space Data Link Protocol
+[![pipeline status](https://gitlab.com/librespacefoundation/osdlp/badges/master/pipeline.svg)](https://gitlab.com/librespacefoundation/osdlp/commits/master)
+[![coverage report](https://gitlab.com/librespacefoundation/osdlp/badges/master/coverage.svg)](https://gitlab.com/librespacefoundation/osdlp/commits/master)
 
 This is the open-source, OS-independent library that implements the following standards:
 
