@@ -1,7 +1,7 @@
 /*
  *  Open Space Data Link Protocol
  *
- *  Copyright (C) 2019 Libre Space Foundation (https://libre.space)
+ *  Copyright (C) 2020 Libre Space Foundation (https://libre.space)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,14 +22,15 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-
-#include "cop.h"
-
+#include "clcw.h"
 /**
  * The maximum allowed frame size
  */
-#define MAX_FRAME_LEN			1024
-#define TC_VERSION_NUMBER		0
+#define TC_MAX_FRAME_LEN			1024
+#define TC_VERSION_NUMBER		    0
+#define		UNLOCK_CMD		0
+#define		SETVR_BYTE1		0x82
+#define		SETVR_BYTE2		0
 
 typedef enum {
 	TYPE_A 		= 0,
@@ -113,9 +114,15 @@ struct tc_mission_params {
 	struct	util_buf	util;
 	uint8_t				crc_flag;			/**/
 	uint8_t				seg_hdr_flag;
-	uint16_t			max_data_size;
-	uint16_t			max_fdu_size;
+	uint16_t			max_sdu_size;		/* Maximum size of higher layer frame*/
+	uint16_t			max_data_size;		/* Maximum size of data portion of packet*/
+	uint16_t			max_frame_size;		/* Maximum size of frame*/
 	uint16_t			fixed_overhead_len;
+	uint16_t			spacecraft_id;		/* Spacecraft ID*/
+	uint8_t				vcid; 				/* Cirtual Channel ID*/
+	uint8_t				version_num;
+	uint8_t				unlock_cmd;
+	uint8_t				set_vr_cmd[3];
 };
 
 /**
@@ -126,11 +133,68 @@ struct segment_status {
 	uint16_t	octets_txed;
 };
 
+struct farm_config {
+	uint8_t		state;
+	uint8_t		lockout;
+	uint8_t		wait;
+	uint8_t		retransmit;
+	uint8_t		vr;
+	uint8_t		farmb_cnt;
+	uint8_t		w;
+	uint8_t		pw;
+	uint8_t		nw;
+};
+
+typedef enum {
+	ACCEPT_DIR		= 0,
+	REJECT_DIR		= 1,
+	POSITIVE_DIR	= 2,
+	NEGATIVE_DIR	= 3,
+	SUSPEND			= 4,
+	ALERT_LIMIT		= 5,
+	ALERT_T1		= 6,
+	ALERT_LOCKOUT	= 7,
+	ALERT_SYNCH		= 8,
+	ALERT_NNR		= 9,
+	ALERT_CLCW		= 10,
+	ALERT_LLIF		= 11,
+	ALERT_TERM		= 12,
+	ACCEPT_TX		= 13,
+	REJECT_TX		= 14,
+	POSITIVE_TX		= 15,
+	NEGATIVE_TX		= 16,
+	DELAY_RESP		= 17,
+	UNDEF_ERROR		= 18,
+	IGNORE			= 19,
+	NA				= 20
+} notification_t;
+
+struct fop_config {
+	uint8_t			state;
+	uint8_t			vs;
+	uint8_t			out_flag;
+	uint8_t			nnr;
+	uint16_t		t1_init;
+	uint8_t			tx_lim;
+	uint8_t			tx_cnt;
+	uint8_t			slide_wnd;
+	uint8_t			tt;
+	uint8_t			ss;
+	notification_t 	signal;						/* This field is used as a way to signal
+	 	 	 	 	 	 	 	 	 	 	 	 higher layers from the COP-1*/
+};
+
+struct cop_config {
+	union {
+		struct fop_config	fop;
+		struct farm_config 	farm;
+	};
+};
 
 struct tc_transfer_frame {
 	struct tc_primary_hdr		primary_hdr;	/* Primary header struct*/
 	struct tc_mission_params	mission;		/* Mission params*/
-	struct cop_params			cop_cfg;		/* COP configuration struct*/
+	struct cop_config			cop_cfg;		/* COP configuration struct*/
 	struct tc_fdf				frame_data;		/* Frame data structure*/
 	struct segment_status		seg_status;		/* Segment status struct*/
 	uint16_t					crc;			/* CRC*/
@@ -140,6 +204,7 @@ int
 tc_init(struct tc_transfer_frame *tc_tf,
         uint16_t scid,
         uint16_t max_fdu_size,
+        uint16_t max_frame_size,
         uint8_t vcid,
         uint8_t mapid,
         tc_crc_flag_t crc_flag,
@@ -147,7 +212,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
         tc_bypass_t bypass,
         tc_ctrl_t ctrl_cmd,
         uint8_t *util_buffer,
-        struct cop_params cop);
+        struct cop_config cop);
 /**
  * Unpacks a received buffer and populates the corresponding fields of
  * a TC config structure
@@ -167,5 +232,72 @@ tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in);
 int
 tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
         uint8_t *data_in, uint16_t length);
+
+int
+prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                         uint16_t size);
+
+int
+prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                         uint16_t size);
+
+int
+prepare_typeb_unlock(struct tc_transfer_frame *tc_tf);
+
+int
+prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr);
+
+int
+prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw);
+
+int
+frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer);
+
+int
+tc_receive(uint8_t *rx_buffer, uint32_t length);
+
+notification_t
+tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length);
+
+
+/**
+ * Returns the configuration struct for the specific vcid
+ * @param the vcid
+ */
+__attribute__((weak))
+struct tc_transfer_frame *
+get_config(uint16_t);
+
+/**
+ * Enqueues an item on the rx queue
+ * @param the buffer to be enqueued
+ * @param the vcid
+ * Returns 0 on success, 1 otherwise
+ */
+__attribute__((weak))
+int
+rx_queue_enqueue(uint8_t *, uint16_t);
+
+/**
+ * Dequeues an item from the rx queue
+ * @param the buffer to place the item
+ * @param the vcid
+ * Returns 0 on success, 1 otherwise
+ */
+__attribute__((weak))
+int
+rx_queue_dequeue(uint8_t *, uint16_t);
+
+/**
+ * Enqueues an item on the rx queue even
+ * if there is no space,
+ * by deleting the tail item
+ * @param the buffer to place the item
+ * @param the vcid
+ * Returns 0 on success, 1 otherwise
+ */
+__attribute__((weak))
+int
+rx_queue_enqueue_now(uint8_t *, uint8_t);
 
 #endif /* INCLUDE_TC_H_ */

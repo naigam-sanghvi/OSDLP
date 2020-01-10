@@ -23,5 +23,7 @@
 #include "tc.h"
 #include "tm.h"
 #include "crc.h"
+#include "cop.h"
+
 
 #endif /* INCLUDE_OSDLP_H_ */

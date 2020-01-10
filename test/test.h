@@ -34,4 +34,7 @@ test_tm(void **state);
 void
 test_tc(void **state);
 
+void
+test_simple_bd_frame(void **state);
+
 #endif /* TEST_TEST_H_ */

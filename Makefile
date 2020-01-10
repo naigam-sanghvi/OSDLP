@@ -29,7 +29,8 @@ SRC        = $(wildcard $(SRC_DIR)/*.c)
 OBJ        = $(SRC:$(SRC_DIR)/%.c=$(SRC_DIR)/%.o)
 QA_EXE_SRC = $(QA_SRC_DIR)/test.c
 QA_SRC     = $(QA_SRC_DIR)/queue_util.c \
-             $(QA_SRC_DIR)/test_pack_unpack.c
+             $(QA_SRC_DIR)/test_pack_unpack.c \
+             $(QA_SRC_DIR)/test_typeb_frames.c
 
 INCLUDES   += -I$(INCL_DIR)
 QA_INC     = $(INCLUDES)
@@ -54,9 +55,10 @@ test: $(QA_EXE)
 	./$(QA_EXE)
 
 coverage: $(QA_EXE)
-	$(CC) -fprofile-arcs -ftest-coverage -g -O0 $(QA_INC) $(LDFLAGS) $(QA_SRC) $(QA_EXE_SRC) $(QA_LDLIBS) ${LIBNAME} -o $(QA_EXE)
+	$(CC) -fprofile-arcs -ftest-coverage -g -fPIC -O0 $(QA_INC) $(INCLUDES) $(LDFLAGS) $(QA_SRC) $(QA_EXE_SRC) $(QA_LDLIBS) $(SRC) -o $(QA_EXE)
 	./$(QA_EXE)
 	gcovr --html --html-details -o coverage.html
+	gcovr
 
 clean:
 	$(RM) $(OBJ)
