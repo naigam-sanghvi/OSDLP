@@ -184,7 +184,6 @@ int
 tc_receive(uint8_t *rx_buffer, uint32_t length)
 {
 	farm_result_t farm_ret;
-
 	/* Delimiting */
 	uint16_t frame_len = (rx_buffer[2] & 0x03) << 8;
 	frame_len |= (rx_buffer[3] & 0xff);
@@ -194,7 +193,7 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 
 	/* Frame Validation Checks */
 	uint8_t vcid = ((rx_buffer[2] >> 2) & 0x3f);
-	struct tc_transfer_frame *tc_tf = get_config(vcid);
+	struct tc_transfer_frame *tc_tf = get_rx_config(vcid);
 	if (tc_tf == NULL) {
 		return 1;
 	}
@@ -300,9 +299,10 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 				rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 			}
 		}
-	} else {
+	} else if (farm_ret == COP_ERROR) {
 		tc_tf->mission.util.buffered_length = 0;
 		tc_tf->mission.util.loop_state = LOOP_CLOSED;
+		return 1;
 	}
 	return 0;
 }
@@ -310,20 +310,11 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 notification_t
 tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 {
-
-	tc_tf->cop_cfg.fop.signal = IGNORE;
 	uint16_t remaining = length;
-	/* Check if a segmentation process has already begun*/
-	if (tc_tf->seg_status.flag) {
-		remaining = length - tc_tf->seg_status.octets_txed;
-	}
 	uint16_t bytes_avail = 0;
 	notification_t notif;
-	if (remaining / tc_tf->mission.max_data_size == 0
-	    || remaining == tc_tf->mission.max_data_size) {
-		tc_tf->frame_data.seg_hdr.seq_flag = TC_UNSEG;
-	} else {
-		tc_tf->frame_data.seg_hdr.seq_flag = TC_FIRST_SEG;
+	if (tc_tf->seg_status.flag) {
+		remaining = length - tc_tf->seg_status.octets_txed;
 	}
 	while (remaining > 0) {
 		if (remaining / tc_tf->mission.max_data_size > 0) {
@@ -332,15 +323,21 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 			bytes_avail = remaining;
 		}
 		/*Prepare the config struct*/
-		if (remaining - bytes_avail == 0) {
-			if (tc_tf->frame_data.seg_hdr.seq_flag != TC_UNSEG) {
+		/* Check if a segmentation process has already begun*/
+		if (tc_tf->seg_status.flag) {
+			if (remaining > tc_tf->mission.max_data_size) {
+				tc_tf->frame_data.seg_hdr.seq_flag = TC_CONT_SEG;
+			} else {
 				tc_tf->frame_data.seg_hdr.seq_flag = TC_LAST_SEG;
 			}
 		} else {
-			if (remaining != length) {
-				tc_tf->frame_data.seg_hdr.seq_flag = TC_CONT_SEG;
+			if (remaining <= bytes_avail) {
+				tc_tf->frame_data.seg_hdr.seq_flag = TC_UNSEG;
+			} else {
+				tc_tf->frame_data.seg_hdr.seq_flag = TC_FIRST_SEG;
 			}
 		}
+
 		tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len + bytes_avail;
 		tc_tf->frame_data.data_len = bytes_avail;
 		tc_tf->frame_data.data = buffer + (length - remaining);
@@ -360,7 +357,7 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
 			case DELAY_RESP:
-				if (remaining > tc_tf->mission.max_data_size) {
+				if (remaining > 0) {
 					tc_tf->seg_status.flag = SEG_IN_PROGRESS;
 					tc_tf->seg_status.octets_txed = length - remaining;
 				} else {
@@ -370,6 +367,13 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 				return DELAY_RESP;
 			case ACCEPT_TX:
 			case IGNORE:
+				if (remaining == 0) {
+					tc_tf->seg_status.flag = SEG_ENDED;
+					tc_tf->seg_status.octets_txed = 0;
+				} else {
+					tc_tf->seg_status.flag = SEG_IN_PROGRESS;
+					tc_tf->seg_status.octets_txed = length - remaining;
+				}
 				continue;
 			case UNDEF_ERROR:
 				tc_tf->seg_status.flag = SEG_ENDED;
@@ -441,5 +445,6 @@ prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw)
 	clcw->rt = tc_tf->cop_cfg.farm.retransmit;
 	clcw->wait = tc_tf->cop_cfg.farm.wait;
 	clcw->report_value = tc_tf->cop_cfg.farm.vr;
+	clcw->vcid = tc_tf->mission.vcid;
 	return 0;
 }

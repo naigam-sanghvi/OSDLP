@@ -136,8 +136,11 @@ reset_lockout(struct farm_config *farm_cfg);
 void
 set_wait(struct farm_config *farm_cfg);
 
-void
-reset_wait(struct farm_config *farm_cfg);
+int
+reset_wait(struct tc_transfer_frame *tc_tf);
+
+int
+buffer_release(struct tc_transfer_frame *tc_tf);
 
 void
 set_retransmit(struct farm_config *farm_cfg);
@@ -157,13 +160,13 @@ purge_wait_queue(struct tc_transfer_frame *tc_tf);
 notification_t
 look_for_fdu(struct tc_transfer_frame *tc_tf);
 
-notification_t
+int
 transmit_type_ad(struct tc_transfer_frame *tc_tf);
 
-notification_t
+int
 transmit_type_bc(struct tc_transfer_frame *tc_tf);
 
-notification_t
+int
 transmit_type_bd(struct tc_transfer_frame *tc_tf);
 
 int
@@ -178,7 +181,7 @@ remove_acked_frames(struct tc_transfer_frame *tc_tf, uint8_t nr);
 notification_t
 look_for_directive(struct tc_transfer_frame *tc_tf);
 
-int
+notification_t
 handle_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw);
 
 notification_t
@@ -369,6 +372,14 @@ bool
 rx_queue_full(uint8_t);
 
 /**
+ * Clears the RX queue
+ * @param the vcid
+ */
+__attribute__((weak))
+int
+rx_queue_clear(uint8_t);
+
+/**
  * Checks if tx queue is full
  * @param the vcid
  */
@@ -386,7 +397,7 @@ tx_queue_full();
  */
 __attribute__((weak))
 int
-tx_queue_enqueue(uint8_t *);
+tx_queue_enqueue(uint8_t *, uint16_t);
 
 /**
  * Starts the timer

@@ -10,6 +10,8 @@ This is the open-source, OS-independent library that implements the following st
 
 [3] [CCSDS TC Space Data Link Protocol](https://public.ccsds.org/Pubs/232x0b3.pdf)
 
+[4] [Communications Operation Procedure-1](https://public.ccsds.org/Pubs/232x1b2e2c1.pdf)
+
 ### Coding style
 For the C code, `osdlp` uses a slightly modified version of the 
 **Stroustrup** style, which is a nicer adaptation of the well known K&R style.

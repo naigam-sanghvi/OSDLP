@@ -26,7 +26,7 @@
 /**
  * The maximum allowed frame size
  */
-#define TC_MAX_FRAME_LEN			1024
+#define TC_MAX_FRAME_LEN			256
 #define TC_VERSION_NUMBER		    0
 #define		UNLOCK_CMD		0
 #define		SETVR_BYTE1		0x82
@@ -259,6 +259,13 @@ tc_receive(uint8_t *rx_buffer, uint32_t length);
 notification_t
 tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length);
 
+/**
+ * Returns the configuration struct for the specific vcid
+ * @param the vcid
+ */
+__attribute__((weak))
+struct tc_transfer_frame *
+get_rx_config(uint16_t);
 
 /**
  * Returns the configuration struct for the specific vcid
@@ -266,7 +273,7 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length);
  */
 __attribute__((weak))
 struct tc_transfer_frame *
-get_config(uint16_t);
+get_tx_config(uint16_t);
 
 /**
  * Enqueues an item on the rx queue
