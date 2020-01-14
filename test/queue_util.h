@@ -51,9 +51,9 @@ dequeue(struct queue *que, void *pkt);
 int
 reset_queue(struct queue *que);
 
-
-uint16_t
-size(struct queue *que);
+//
+//uint16_t
+//size(struct queue *que);
 
 
 bool

@@ -63,6 +63,14 @@ typedef enum {
 	SEG_IN_PROGRESS	= 1
 } seg_status_t;
 
+typedef enum {
+	COP_OK 				= 0,
+	COP_ENQ				= 1,
+	COP_PRIORITY_ENQ 	= 2,
+	COP_DISCARD 		= 3,
+	COP_ERROR			= 4
+} farm_result_t;
+
 struct tc_primary_hdr {
 	uint8_t				version_num 	: 2;	/* TC version number*/
 	uint8_t				bypass			: 1;	/* Bypass flag*/
@@ -253,7 +261,7 @@ prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw);
 int
 frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer);
 
-int
+farm_result_t
 tc_receive(uint8_t *rx_buffer, uint32_t length);
 
 notification_t

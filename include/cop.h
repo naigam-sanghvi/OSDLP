@@ -40,14 +40,6 @@ typedef enum {
 } farm_state_t;
 
 typedef enum {
-	COP_OK 				= 0,
-	COP_ENQ				= 1,
-	COP_PRIORITY_ENQ 	= 2,
-	COP_DISCARD 		= 3,
-	COP_ERROR			= 4
-} farm_result_t;
-
-typedef enum {
 	RT_FLAG_OFF = 0,
 	RT_FLAG_ON  = 1
 } rt_flag_t;

@@ -180,7 +180,7 @@ frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer)
 	return 0;
 }
 
-int
+farm_result_t
 tc_receive(uint8_t *rx_buffer, uint32_t length)
 {
 	farm_result_t farm_ret;
@@ -188,25 +188,25 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 	uint16_t frame_len = (rx_buffer[2] & 0x03) << 8;
 	frame_len |= (rx_buffer[3] & 0xff);
 	if ((frame_len + 1) > length) {
-		return 1;
+		return COP_ERROR;
 	}
 
 	/* Frame Validation Checks */
 	uint8_t vcid = ((rx_buffer[2] >> 2) & 0x3f);
 	struct tc_transfer_frame *tc_tf = get_rx_config(vcid);
 	if (tc_tf == NULL) {
-		return 1;
+		return COP_ERROR;
 	}
 
 	int ret = 0;
 	ret = tc_unpack(tc_tf, rx_buffer);
 	if (ret) {
-		return 1;
+		return COP_ERROR;
 	}
 
 	ret = frame_validation_check(tc_tf, rx_buffer);
 	if (ret) {
-		return 1;
+		return COP_ERROR;
 	}
 
 	/* Perform FARM-1 */
@@ -217,7 +217,7 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 			switch (tc_tf->frame_data.seg_hdr.seq_flag) {
 				case TC_UNSEG:
 					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_size) {
-						return 1;
+						return COP_ERROR;
 					}
 					memcpy(tc_tf->mission.util.buffer,
 					       tc_tf->frame_data.data,
@@ -227,33 +227,33 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 					} else {
 						rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 					}
-					return 0;
+					return farm_ret;
 				case TC_FIRST_SEG:
 					if (tc_tf->mission.util.loop_state != LOOP_CLOSED) {
 						tc_tf->mission.util.buffered_length = 0;
 						tc_tf->mission.util.loop_state = LOOP_CLOSED;
-						return 1;
+						return COP_DISCARD;
 					}
 					tc_tf->mission.util.buffered_length = tc_tf->frame_data.data_len;
 					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_size) {
-						return 1;
+						return COP_ERROR;
 					}
 					memcpy(tc_tf->mission.util.buffer,
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					tc_tf->mission.util.loop_state = LOOP_OPEN;
-					return 0;
+					return farm_ret;
 				case TC_LAST_SEG:
 					/* An intermediate packet was lost. Loop was never opened*/
 					if (tc_tf->mission.util.loop_state != LOOP_OPEN) {
 						tc_tf->mission.util.buffered_length = 0;
-						return 1;
+						return COP_DISCARD;
 					}
 					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
 					    tc_tf->mission.max_sdu_size) {
 						tc_tf->mission.util.buffered_length = 0;
 						tc_tf->mission.util.loop_state = LOOP_CLOSED;
-						return 1;
+						return COP_DISCARD;
 					}
 					memcpy(&tc_tf->mission.util.buffer[tc_tf->mission.util.buffered_length],
 					       tc_tf->frame_data.data,
@@ -264,31 +264,31 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 						rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 					}
 					tc_tf->mission.util.loop_state = LOOP_CLOSED;
-					return 0;
+					return farm_ret;
 				case TC_CONT_SEG:
 					/* An intermediate packet was lost. Loop was never opened*/
 					if (tc_tf->mission.util.loop_state != LOOP_OPEN) {
 						tc_tf->mission.util.buffered_length = 0;
-						return 1;
+						return COP_DISCARD;
 					}
 					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
 					    tc_tf->mission.max_sdu_size) {
 						tc_tf->mission.util.buffered_length = 0;
 						tc_tf->mission.util.loop_state = LOOP_CLOSED;
-						return 1;
+						return COP_DISCARD;
 					}
 
 					memcpy(&tc_tf->mission.util.buffer[tc_tf->mission.util.buffered_length],
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					tc_tf->mission.util.buffered_length += tc_tf->frame_data.data_len;
-					return 0;
+					return farm_ret;
 			}
 		} else {
 			if (tc_tf->frame_data.data_len > tc_tf->mission.max_sdu_size) {
 				tc_tf->mission.util.buffered_length = 0;
 				tc_tf->mission.util.loop_state = LOOP_CLOSED;
-				return 1;
+				return COP_DISCARD;
 			}
 			memcpy(tc_tf->mission.util.buffer,
 			       tc_tf->frame_data.data,
@@ -302,9 +302,9 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 	} else if (farm_ret == COP_ERROR) {
 		tc_tf->mission.util.buffered_length = 0;
 		tc_tf->mission.util.loop_state = LOOP_CLOSED;
-		return 1;
+		return COP_ERROR;
 	}
-	return 0;
+	return farm_ret;
 }
 
 notification_t
@@ -446,5 +446,6 @@ prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw)
 	clcw->wait = tc_tf->cop_cfg.farm.wait;
 	clcw->report_value = tc_tf->cop_cfg.farm.vr;
 	clcw->vcid = tc_tf->mission.vcid;
+	clcw->clcw_version_num = 0;
 	return 0;
 }

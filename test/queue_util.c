@@ -104,11 +104,11 @@ reset_queue(struct queue *que)
 }
 
 
-uint16_t
-size(struct queue *que)
-{
-	return que->inqueue;
-}
+//uint16_t
+//size(struct queue *que)
+//{
+//	return que->inqueue;
+//}
 
 
 bool

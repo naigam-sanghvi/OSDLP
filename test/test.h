@@ -129,4 +129,7 @@ test_timer(void **state);
 void
 test_operation(void **state);
 
+void
+test_vr(void **state);
+
 #endif /* TEST_TEST_H_ */
