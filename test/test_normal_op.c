@@ -1,3 +1,22 @@
+/*
+ *  Open Space Data Link Protocol
+ *
+ *  Copyright (C) 2020 Libre Space Foundation (https://libre.space)
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
@@ -166,7 +185,7 @@ receiver(void *vargp)
 	srand(time(0));
 	while (1) {
 		/* Sleep some random time to simulate delays*/
-		rx_sleep = rand() % 7;
+		rx_sleep = rand() % 3;
 		sleep(rx_sleep);
 		pthread_mutex_lock(&lock);
 		if (has_ended) {
@@ -326,7 +345,7 @@ timer_handler(void *vargp)
 		if (has_ended) {
 			break;
 		}
-		usleep(100);
+		//usleep(100);
 		if (start_timer && !timer_running) {
 			pthread_t thread4;
 			pthread_create(&thread4, NULL, timer_thread, NULL);
@@ -355,7 +374,7 @@ process_timer(void *var)
 {
 	time_t begin, end;
 	begin = time(NULL);
-	int trigger = 120;
+	int trigger = 30;
 	do {
 		end = time(NULL);
 	} while (difftime(end, begin) < trigger);
@@ -388,7 +407,7 @@ test_operation(void **state)
 	tc_ctrl_t     ctrl = TC_DATA;
 	uint16_t      fop_slide_wnd = 5;
 	fop_state_t   fop_init_st = FOP_STATE_INIT;
-	uint16_t      fop_t1_init = 2;
+	uint16_t      fop_t1_init = 1;
 	uint16_t      fop_timeout_type = 0;
 	uint8_t       fop_tx_limit = 10;
 	farm_state_t  farm_init_st = FARM_STATE_OPEN;

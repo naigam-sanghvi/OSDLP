@@ -124,7 +124,7 @@ resume(struct tc_transfer_frame *tc_tf);
 int
 reset_accept(struct tc_transfer_frame *tc_tf);
 
-int
+farm_result_t
 farm_1(struct tc_transfer_frame *tc_tf);
 
 void
