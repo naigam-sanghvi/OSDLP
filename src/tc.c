@@ -1,7 +1,7 @@
 /*
  *  Open Space Data Link Protocol
  *
- *  Copyright (C) 2019 Libre Space Foundation (https://libre.space)
+ *  Copyright (C) 2020 Libre Space Foundation (https://libre.space)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,20 +18,21 @@
  */
 
 #include "tc.h"
+#include "cop.h"
+#include "crc.h"
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 
-#include "../include/cop.h"
-#include "../include/crc.h"
 
 #define	TC_TRANSFER_FRAME_PRIMARY_HEADER		5
 
 int
 tc_init(struct tc_transfer_frame *tc_tf,
         uint16_t scid,
-        uint16_t max_fdu_size,
+        uint16_t max_sdu_size,
+        uint16_t max_frame_size,
         uint8_t vcid,
         uint8_t mapid,
         tc_crc_flag_t crc_flag,
@@ -39,9 +40,9 @@ tc_init(struct tc_transfer_frame *tc_tf,
         tc_bypass_t bypass,
         tc_ctrl_t ctrl_cmd,
         uint8_t *util_buffer,
-        struct cop_params cop)
+        struct cop_config cop)
 {
-	if (max_fdu_size <= TC_TRANSFER_FRAME_PRIMARY_HEADER) {
+	if (max_frame_size <= TC_TRANSFER_FRAME_PRIMARY_HEADER) {
 		return 1;
 	}
 	struct tc_mission_params m;
@@ -53,12 +54,20 @@ tc_init(struct tc_transfer_frame *tc_tf,
 	tc_tf->primary_hdr.frame_len			= 0;
 	tc_tf->primary_hdr.frame_seq_num		= 0;
 	tc_tf->primary_hdr.rsvd_spare			= 0;
+
+	m.version_num							= TC_VERSION_NUMBER;
+	m.spacecraft_id							= scid;
+	m.vcid									= vcid;
 	m.crc_flag								= crc_flag;
 	m.seg_hdr_flag							= seg_hdr_flag;
-	m.max_fdu_size							= max_fdu_size;
-	m.max_data_size							= max_fdu_size;
+	m.max_frame_size						= max_frame_size;
+	m.max_sdu_size							= max_sdu_size;
+	m.max_data_size							= max_frame_size;
 	m.util.buffer							= util_buffer;
 	m.fixed_overhead_len					= TC_TRANSFER_FRAME_PRIMARY_HEADER;
+	m.unlock_cmd							= 0;
+	m.set_vr_cmd[0]							= SETVR_BYTE1;
+	m.set_vr_cmd[1]							= SETVR_BYTE2;
 
 	if (m.seg_hdr_flag == TC_SEG_HDR_PRESENT) {
 		m.fixed_overhead_len += 1;
@@ -66,7 +75,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
 	if (m.crc_flag == TC_CRC_PRESENT) {
 		m.fixed_overhead_len += 2;
 	}
-	m.max_data_size							= m.max_fdu_size - m.fixed_overhead_len;
+	m.max_data_size							= m.max_frame_size - m.fixed_overhead_len;
 	m.util.loop_state 						= LOOP_CLOSED;
 	tc_tf->mission							= m;
 	tc_tf->frame_data.seg_hdr.map_id 		= mapid & 0x3f;
@@ -92,12 +101,12 @@ tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in)
 
 	tc_tf->frame_data.data_len = tc_p_hdr.frame_len + 1 -
 	                             tc_tf->mission.fixed_overhead_len;
-	if (tc_p_hdr.ctrl_cmd  == TC_DATA) {
-		if (tc_tf->mission.seg_hdr_flag) {
-			tc_tf->frame_data.seg_hdr.seq_flag 	= (pkt_in[5] >> 6) & 0x03;
-			tc_tf->frame_data.seg_hdr.map_id 	= pkt_in[5] & 0x3f;
-			tc_tf->frame_data.data = &pkt_in[6];
-		}
+
+	if (tc_tf->mission.seg_hdr_flag) {
+		tc_tf->frame_data.seg_hdr.seq_flag 	= (pkt_in[5] >> 6) & 0x03;
+		tc_tf->frame_data.seg_hdr.map_id 	= pkt_in[5] & 0x3f;
+		tc_tf->frame_data.data = &pkt_in[6];
+
 	} else {
 		tc_tf->frame_data.data = &pkt_in[5];
 	}
@@ -145,5 +154,297 @@ tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 		pkt_out[packet_len] = crc & 0xff;
 		tc_tf->crc = crc;
 	}
+	return 0;
+}
+
+int
+frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer)
+{
+	uint8_t check[1000];
+	memcpy(check, rx_buffer, tc_tf->primary_hdr.frame_len + 1);
+	if (tc_tf->mission.version_num != tc_tf->primary_hdr.version_num) {
+		return 1;
+	}
+	if (tc_tf->mission.spacecraft_id != tc_tf->primary_hdr.spacecraft_id) {
+		return 1;
+	}
+	if (tc_tf->mission.crc_flag) {
+		uint16_t crc = calc_crc(rx_buffer, tc_tf->primary_hdr.frame_len - 1);
+		uint16_t rx_crc;
+		rx_crc = (rx_buffer[tc_tf->primary_hdr.frame_len - 1] & 0xff) << 8;
+		rx_crc |= (rx_buffer[tc_tf->primary_hdr.frame_len] & 0xff);
+		if (crc != rx_crc) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int
+tc_receive(uint8_t *rx_buffer, uint32_t length)
+{
+	farm_result_t farm_ret;
+	/* Delimiting */
+	uint16_t frame_len = (rx_buffer[2] & 0x03) << 8;
+	frame_len |= (rx_buffer[3] & 0xff);
+	if ((frame_len + 1) > length) {
+		return 1;
+	}
+
+	/* Frame Validation Checks */
+	uint8_t vcid = ((rx_buffer[2] >> 2) & 0x3f);
+	struct tc_transfer_frame *tc_tf = get_rx_config(vcid);
+	if (tc_tf == NULL) {
+		return 1;
+	}
+
+	int ret = 0;
+	ret = tc_unpack(tc_tf, rx_buffer);
+	if (ret) {
+		return 1;
+	}
+
+	ret = frame_validation_check(tc_tf, rx_buffer);
+	if (ret) {
+		return 1;
+	}
+
+	/* Perform FARM-1 */
+	farm_ret = farm_1(tc_tf);
+	if (farm_ret == COP_ENQ || farm_ret == COP_PRIORITY_ENQ) {
+		/* Handle segmentation */
+		if (tc_tf->mission.seg_hdr_flag) {
+			switch (tc_tf->frame_data.seg_hdr.seq_flag) {
+				case TC_UNSEG:
+					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_size) {
+						return 1;
+					}
+					memcpy(tc_tf->mission.util.buffer,
+					       tc_tf->frame_data.data,
+					       tc_tf->frame_data.data_len * sizeof(uint8_t));
+					if (farm_ret == COP_ENQ) {
+						rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+					} else {
+						rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+					}
+					return 0;
+				case TC_FIRST_SEG:
+					if (tc_tf->mission.util.loop_state != LOOP_CLOSED) {
+						tc_tf->mission.util.buffered_length = 0;
+						tc_tf->mission.util.loop_state = LOOP_CLOSED;
+						return 1;
+					}
+					tc_tf->mission.util.buffered_length = tc_tf->frame_data.data_len;
+					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_size) {
+						return 1;
+					}
+					memcpy(tc_tf->mission.util.buffer,
+					       tc_tf->frame_data.data,
+					       tc_tf->frame_data.data_len * sizeof(uint8_t));
+					tc_tf->mission.util.loop_state = LOOP_OPEN;
+					return 0;
+				case TC_LAST_SEG:
+					/* An intermediate packet was lost. Loop was never opened*/
+					if (tc_tf->mission.util.loop_state != LOOP_OPEN) {
+						tc_tf->mission.util.buffered_length = 0;
+						return 1;
+					}
+					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
+					    tc_tf->mission.max_sdu_size) {
+						tc_tf->mission.util.buffered_length = 0;
+						tc_tf->mission.util.loop_state = LOOP_CLOSED;
+						return 1;
+					}
+					memcpy(&tc_tf->mission.util.buffer[tc_tf->mission.util.buffered_length],
+					       tc_tf->frame_data.data,
+					       tc_tf->frame_data.data_len * sizeof(uint8_t));
+					if (farm_ret == COP_ENQ) {
+						rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+					} else {
+						rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+					}
+					tc_tf->mission.util.loop_state = LOOP_CLOSED;
+					return 0;
+				case TC_CONT_SEG:
+					/* An intermediate packet was lost. Loop was never opened*/
+					if (tc_tf->mission.util.loop_state != LOOP_OPEN) {
+						tc_tf->mission.util.buffered_length = 0;
+						return 1;
+					}
+					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
+					    tc_tf->mission.max_sdu_size) {
+						tc_tf->mission.util.buffered_length = 0;
+						tc_tf->mission.util.loop_state = LOOP_CLOSED;
+						return 1;
+					}
+
+					memcpy(&tc_tf->mission.util.buffer[tc_tf->mission.util.buffered_length],
+					       tc_tf->frame_data.data,
+					       tc_tf->frame_data.data_len * sizeof(uint8_t));
+					tc_tf->mission.util.buffered_length += tc_tf->frame_data.data_len;
+					return 0;
+			}
+		} else {
+			if (tc_tf->frame_data.data_len > tc_tf->mission.max_sdu_size) {
+				tc_tf->mission.util.buffered_length = 0;
+				tc_tf->mission.util.loop_state = LOOP_CLOSED;
+				return 1;
+			}
+			memcpy(tc_tf->mission.util.buffer,
+			       tc_tf->frame_data.data,
+			       tc_tf->frame_data.data_len * sizeof(uint8_t));
+			if (farm_ret == COP_ENQ) {
+				rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+			} else {
+				rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+			}
+		}
+	} else if (farm_ret == COP_ERROR) {
+		tc_tf->mission.util.buffered_length = 0;
+		tc_tf->mission.util.loop_state = LOOP_CLOSED;
+		return 1;
+	}
+	return 0;
+}
+
+notification_t
+tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
+{
+	uint16_t remaining = length;
+	uint16_t bytes_avail = 0;
+	notification_t notif;
+	if (tc_tf->seg_status.flag) {
+		remaining = length - tc_tf->seg_status.octets_txed;
+	}
+	while (remaining > 0) {
+		if (remaining / tc_tf->mission.max_data_size > 0) {
+			bytes_avail = tc_tf->mission.max_data_size;
+		} else {
+			bytes_avail = remaining;
+		}
+		/*Prepare the config struct*/
+		/* Check if a segmentation process has already begun*/
+		if (tc_tf->seg_status.flag) {
+			if (remaining > tc_tf->mission.max_data_size) {
+				tc_tf->frame_data.seg_hdr.seq_flag = TC_CONT_SEG;
+			} else {
+				tc_tf->frame_data.seg_hdr.seq_flag = TC_LAST_SEG;
+			}
+		} else {
+			if (remaining <= bytes_avail) {
+				tc_tf->frame_data.seg_hdr.seq_flag = TC_UNSEG;
+			} else {
+				tc_tf->frame_data.seg_hdr.seq_flag = TC_FIRST_SEG;
+			}
+		}
+
+		tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len + bytes_avail;
+		tc_tf->frame_data.data_len = bytes_avail;
+		tc_tf->frame_data.data = buffer + (length - remaining);
+
+		if (!tx_queue_full(tc_tf->primary_hdr.vcid)) {
+			notif = req_transfer_fdu(tc_tf);
+		} else {
+			tc_tf->cop_cfg.fop.signal = REJECT_TX;
+			return REJECT_TX;
+		}
+		remaining -= bytes_avail;
+		/* Handle response */
+		switch (notif) {
+			case REJECT_TX:
+				tc_tf->seg_status.flag = SEG_ENDED;
+				tc_tf->seg_status.octets_txed = 0;
+				tc_tf->cop_cfg.fop.signal = REJECT_TX;
+				return REJECT_TX;
+			case DELAY_RESP:
+				if (remaining > 0) {
+					tc_tf->seg_status.flag = SEG_IN_PROGRESS;
+					tc_tf->seg_status.octets_txed = length - remaining;
+				} else {
+					tc_tf->seg_status.flag = SEG_ENDED;
+					tc_tf->seg_status.octets_txed = 0;
+				}
+				return DELAY_RESP;
+			case ACCEPT_TX:
+			case IGNORE:
+				if (remaining == 0) {
+					tc_tf->seg_status.flag = SEG_ENDED;
+					tc_tf->seg_status.octets_txed = 0;
+				} else {
+					tc_tf->seg_status.flag = SEG_IN_PROGRESS;
+					tc_tf->seg_status.octets_txed = length - remaining;
+				}
+				continue;
+			case UNDEF_ERROR:
+				tc_tf->seg_status.flag = SEG_ENDED;
+				tc_tf->seg_status.octets_txed = 0;
+				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
+				return UNDEF_ERROR;
+			default:
+				tc_tf->seg_status.flag = SEG_ENDED;
+				tc_tf->seg_status.octets_txed = 0;
+				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
+				return UNDEF_ERROR;
+		}
+	}
+	tc_tf->cop_cfg.fop.signal = ACCEPT_TX;
+	return ACCEPT_TX;
+}
+
+int
+prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                         uint16_t size)
+{
+	tc_tf->primary_hdr.bypass = TYPE_A;
+	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
+	tc_tf->frame_data.data = buffer;
+	tc_tf->frame_data.data_len = size;
+	return 0;
+}
+
+int
+prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                         uint16_t size)
+{
+	tc_tf->primary_hdr.bypass = TYPE_B;
+	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
+	tc_tf->frame_data.data = buffer;
+	tc_tf->frame_data.data_len = size;
+	return 0;
+}
+
+int
+prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr)
+{
+	tc_tf->primary_hdr.bypass = TYPE_B;
+	tc_tf->primary_hdr.ctrl_cmd = TC_COMMAND;
+	tc_tf->frame_data.seg_hdr.seq_flag = TC_UNSEG;
+	tc_tf->mission.set_vr_cmd[2] = vr;
+	tc_tf->frame_data.data = tc_tf->mission.set_vr_cmd;
+	tc_tf->frame_data.data_len = 3;
+	return 0;
+}
+
+int
+prepare_typeb_unlock(struct tc_transfer_frame *tc_tf)
+{
+	tc_tf->primary_hdr.bypass = TYPE_B;
+	tc_tf->primary_hdr.ctrl_cmd = TC_COMMAND;
+	tc_tf->frame_data.seg_hdr.seq_flag = TC_UNSEG;
+	tc_tf->frame_data.data = &tc_tf->mission.unlock_cmd;
+	tc_tf->frame_data.data_len = 1;
+	return 0;
+}
+
+int
+prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw)
+{
+	clcw->cop_in_effect = 1;
+	clcw->farm_b_counter = tc_tf->cop_cfg.farm.farmb_cnt;
+	clcw->lockout = tc_tf->cop_cfg.farm.lockout;
+	clcw->rt = tc_tf->cop_cfg.farm.retransmit;
+	clcw->wait = tc_tf->cop_cfg.farm.wait;
+	clcw->report_value = tc_tf->cop_cfg.farm.vr;
+	clcw->vcid = tc_tf->mission.vcid;
 	return 0;
 }

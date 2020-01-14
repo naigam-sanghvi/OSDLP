@@ -148,7 +148,7 @@ get_element(struct queue *que, uint16_t pos)
 		return NULL;
 	}
 	if (que->head + pos < que->capacity) {
-		return que->mem_space + (que->head + pos * que->item_size);
+		return que->mem_space + ((que->head + pos) * que->item_size);
 	} else {
 		return que->mem_space + ((que->head + pos - que->capacity) * que->item_size);
 	}

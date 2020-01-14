@@ -74,24 +74,25 @@ test_tc(void **state)
 		data[i] = rand() % 256;
 	struct tc_transfer_frame tc_tx;
 	struct tc_transfer_frame tc_rx;
-	struct cop_params cop;
+	struct cop_config cop;
 	uint8_t vcid 			= 4;
 	uint8_t scid 			= 30;
 	uint8_t mapid 			= 20;
+	uint16_t max_sdu_size 	= 700;
 	uint16_t max_fdu_size 	= 500;
 	tc_crc_flag_t crc 		= TC_CRC_PRESENT;
 	tc_seg_hdr_t seg 		= TC_SEG_HDR_PRESENT;
 	tc_bypass_t bypass 		= TYPE_A;
 	tc_ctrl_t ctrl_cmd 		= TC_DATA;
 	int ret = tc_init(&tc_tx,
-	                  scid, max_fdu_size,
+	                  scid, max_sdu_size, max_fdu_size,
 	                  vcid, mapid, crc,
 	                  seg, bypass, ctrl_cmd,
 	                  util, cop);
 	assert_int_equal(0, ret);
 
 	ret = tc_init(&tc_rx,
-	              0, max_fdu_size,
+	              0, max_sdu_size, max_fdu_size,
 	              0, 0, crc,
 	              seg, 0, 0,
 	              util, cop);

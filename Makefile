@@ -29,14 +29,16 @@ SRC        = $(wildcard $(SRC_DIR)/*.c)
 OBJ        = $(SRC:$(SRC_DIR)/%.c=$(SRC_DIR)/%.o)
 QA_EXE_SRC = $(QA_SRC_DIR)/test.c
 QA_SRC     = $(QA_SRC_DIR)/queue_util.c \
-             $(QA_SRC_DIR)/test_pack_unpack.c
+             $(QA_SRC_DIR)/test_pack_unpack.c \
+             $(QA_SRC_DIR)/test_typeb_frames.c \
+             $(QA_SRC_DIR)/test_normal_op.c
 
 INCLUDES   += -I$(INCL_DIR)
 QA_INC     = $(INCLUDES)
 QA_INC     += -I$(QA_SRC_DIR)
 CFLAGS     += -Wall -g
 LDLIBS     += 
-QA_LDLIBS  += -lcmocka
+QA_LDLIBS  += -lcmocka -lpthread
 
 all: $(QA_EXE)
 
@@ -47,16 +49,17 @@ $(LIBNAME): $(OBJ) $(DEPS)
 	${AR} ru $@ $^
 
 $(QA_EXE): $(LIBNAME) $(QA_SRC) $(QA_EXE_SRC)
-	$(CC) $(QA_INC) $(LDFLAGS) $^ $(QA_LDLIBS) ${LIBNAME} -o $@
+	$(CC) $(QA_INC) $(LDFLAGS) $(CFLAGS) $^ $(QA_LDLIBS) ${LIBNAME} -o $@
 	
 .PHONY: test
 test: $(QA_EXE)
 	./$(QA_EXE)
 
 coverage: $(QA_EXE)
-	$(CC) -fprofile-arcs -ftest-coverage -g -O0 $(QA_INC) $(LDFLAGS) $(QA_SRC) $(QA_EXE_SRC) $(QA_LDLIBS) ${LIBNAME} -o $(QA_EXE)
+	$(CC) -fprofile-arcs -ftest-coverage -g -fPIC -O0 $(QA_INC) $(INCLUDES) $(LDFLAGS) $(QA_SRC) $(QA_EXE_SRC) $(QA_LDLIBS) $(SRC) -o $(QA_EXE)
 	./$(QA_EXE)
 	gcovr --html --html-details -o coverage.html
+	gcovr
 
 clean:
 	$(RM) $(OBJ)
