@@ -46,12 +46,12 @@ transmitter(void *vargp)
 
 	pthread_mutex_lock(&lock);
 	notif = initiate_no_clcw(&tc_tx);
-	assert_int_equal(notif, POSITIVE_TX);
+	assert_int_equal(notif, POSITIVE_DIR);
 	pthread_mutex_unlock(&lock);
 
 	pthread_mutex_lock(&lock);
 	notif = initiate_no_clcw(&tc_tx_unseg);
-	assert_int_equal(notif, POSITIVE_TX);
+	assert_int_equal(notif, POSITIVE_DIR);
 	pthread_mutex_unlock(&lock);
 
 	int tx_sleep;
@@ -68,7 +68,8 @@ transmitter(void *vargp)
 		}
 		if (tc_tx_unseg.cop_cfg.fop.signal == ACCEPT_TX ||
 		    tc_tx_unseg.cop_cfg.fop.signal == ACCEPT_DIR ||
-		    tc_tx_unseg.cop_cfg.fop.signal == POSITIVE_TX) {
+		    tc_tx_unseg.cop_cfg.fop.signal == POSITIVE_TX ||
+		    tc_tx_unseg.cop_cfg.fop.signal == POSITIVE_DIR) {
 			if (tc_tx_unseg.seg_status.flag == SEG_IN_PROGRESS) {
 				notif = tc_transmit(&tc_tx_unseg, buf, size);
 			} else {
@@ -124,6 +125,9 @@ transmitter(void *vargp)
 			packets_txed = npackets;
 			has_packets = true;
 			tx_sleep = (rand() % 3);
+			if (total_packets == 0) {
+				size = MAX_SDU_SIZE;
+			}
 			size = (rand() % (MAX_SDU_SIZE - 10)) + 4;
 			sleep(tx_sleep);
 		}
@@ -131,7 +135,8 @@ transmitter(void *vargp)
 		 * in order to proceed with a new transmission */
 		if (tc_tx.cop_cfg.fop.signal == ACCEPT_TX ||
 		    tc_tx.cop_cfg.fop.signal == ACCEPT_DIR ||
-		    tc_tx.cop_cfg.fop.signal == POSITIVE_TX) {
+		    tc_tx.cop_cfg.fop.signal == POSITIVE_TX ||
+		    tc_tx.cop_cfg.fop.signal == POSITIVE_DIR) {
 			if (tc_tx.seg_status.flag == SEG_IN_PROGRESS) {
 				notif = tc_transmit(&tc_tx, buf, size);
 			} else {
@@ -209,10 +214,7 @@ receiver(void *vargp)
 			ret = dequeue(&uplink_channel, test_util);
 			assert_int_equal(ret, 0);
 			/* Pass it to the receive function of the TC*/
-			ret = tc_receive(test_util, MAX_FRAME_LEN);
-			if (ret) {
-				assert_int_equal(ret, 0);
-			}
+			tc_receive(test_util, MAX_FRAME_LEN);
 			/*Respond with the clcw */
 			if (((test_util[2] >> 2) & 0x3f) == 1)
 				ret = prepare_clcw(&tc_rx, &clcw);
@@ -477,9 +479,9 @@ test_operation(void **state)
 		assert_int_equal(p[0], p[size - 1]);
 	}
 	assert_int_equal(packets_rxed + rx_queues[1].inqueue,
-	                 total_packets);   /*Ensure that we have 10 packets in RX*/
+	                 total_packets);
 	assert_int_equal(rx_queues[0].inqueue,
-	                 6);  /*And six packets in the second vcid queue*/
+	                 6);
 }
 
 

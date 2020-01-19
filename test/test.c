@@ -394,7 +394,8 @@ main()
 		cmocka_unit_test(test_tc),
 		cmocka_unit_test(test_simple_bd_frame),
 		cmocka_unit_test(test_unlock_cmd),
-		cmocka_unit_test(test_operation)
+		cmocka_unit_test(test_vr),
+		cmocka_unit_test(test_operation),
 	};
 	return cmocka_run_group_tests(tests, NULL, NULL);
 }

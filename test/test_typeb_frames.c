@@ -78,9 +78,10 @@ test_simple_bd_frame(void **state)
 
 	int ret;
 	notification_t notif;
+	farm_result_t farm_ret;
 
 	notif = initiate_no_clcw(&tc_tx);               /* Initiate service*/
-	assert_int_equal(notif, POSITIVE_TX);
+	assert_int_equal(notif, POSITIVE_DIR);
 	uint8_t buf[100];
 	for (int i = 0; i < 100; i++) {
 		buf[i] = i;
@@ -96,12 +97,12 @@ test_simple_bd_frame(void **state)
 	assert_int_equal(2, uplink_channel.inqueue);
 
 	ret = dequeue(&uplink_channel, test_util);
-	ret = tc_receive(test_util, TC_MAX_FRAME_LEN);    /* Receive first packet*/
-	assert_int_equal(0, ret);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);    /* Receive first packet*/
+	assert_int_equal(farm_ret, POSITIVE_DIR);
 
 	ret = dequeue(&uplink_channel, test_util);
-	ret = tc_receive(test_util, TC_MAX_FRAME_LEN);    /* Receive 2nd packet*/
-	assert_int_equal(0, ret);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);    /* Receive 2nd packet*/
+	assert_int_equal(farm_ret, POSITIVE_DIR);
 	assert_int_equal(2, rx_queues[1].inqueue);
 }
 
@@ -159,7 +160,7 @@ test_unlock_cmd(void **state)
 	int ret;
 	notification_t notif;
 	notif = initiate_no_clcw(&tc_tx);
-	assert_int_equal(notif, POSITIVE_TX);
+	assert_int_equal(notif, POSITIVE_DIR);
 
 	ret = prepare_typeb_unlock(&tc_tx);
 	ret = transmit_type_bc(&tc_tx);
