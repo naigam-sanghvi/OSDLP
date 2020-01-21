@@ -20,60 +20,60 @@
 #include "test.h"
 
 uint16_t
-wait_queue_size(uint16_t vcid)
+tc_wait_queue_size(uint16_t vcid)
 {
 	return wait_queues[vcid].inqueue;
 }
 
 int
-wait_queue_enqueue(void *tc_tf, uint16_t vcid)
+tc_wait_queue_enqueue(void *tc_tf, uint16_t vcid)
 {
 	int ret = enqueue(&wait_queues[vcid], tc_tf);
 	return ret;
 }
 
 int
-wait_queue_dequeue(void *tc_tf, uint16_t vcid)
+tc_wait_queue_dequeue(void *tc_tf, uint16_t vcid)
 {
 	int ret = dequeue(&wait_queues[vcid], tc_tf);
 	return ret;
 }
 
 bool
-wait_queue_empty(uint16_t vcid)
+tc_wait_queue_empty(uint16_t vcid)
 {
 	return wait_queues[vcid].inqueue == 0 ? true : false;
 }
 
 int
-wait_queue_clear(uint16_t vcid)
+tc_wait_queue_clear(uint16_t vcid)
 {
 	int ret = reset_queue(&wait_queues[vcid]);
 	return ret;
 }
 
 int
-tx_queue_clear()
+tc_tx_queue_clear()
 {
 	int ret = reset_queue(&uplink_channel);
 	return ret;
 }
 
 int
-sent_queue_clear(uint16_t vcid)
+tc_sent_queue_clear(uint16_t vcid)
 {
 	int ret = reset_queue(&sent_queues[vcid]);
 	return ret;
 }
 
 uint16_t
-sent_queue_size(uint16_t vcid)
+tc_sent_queue_size(uint16_t vcid)
 {
 	return sent_queues[vcid].inqueue;
 }
 
 int
-sent_queue_dequeue(struct queue_item *qi, uint16_t vcid)
+tc_sent_queue_dequeue(struct queue_item *qi, uint16_t vcid)
 {
 	struct local_queue_item new_item;
 	int ret = dequeue(&sent_queues[vcid], &new_item);
@@ -85,7 +85,7 @@ sent_queue_dequeue(struct queue_item *qi, uint16_t vcid)
 }
 
 int
-sent_queue_enqueue(struct queue_item *qi, uint16_t vcid)
+tc_sent_queue_enqueue(struct queue_item *qi, uint16_t vcid)
 {
 	uint16_t frame_len = (((qi->fdu[2] & 0x03) << 8) | qi->fdu[3]);
 	struct local_queue_item new_item;
@@ -98,19 +98,19 @@ sent_queue_enqueue(struct queue_item *qi, uint16_t vcid)
 }
 
 bool
-sent_queue_empty(uint16_t vcid)
+tc_sent_queue_empty(uint16_t vcid)
 {
 	return sent_queues[vcid].inqueue == 0 ? true : false;
 }
 
 bool
-sent_queue_full(uint16_t vcid)
+tc_sent_queue_full(uint16_t vcid)
 {
 	return sent_queues[vcid].inqueue == sent_queues[vcid].capacity ? true : false;
 }
 
 int
-sent_queue_head(struct queue_item *qi, uint16_t vcid)
+tc_sent_queue_head(struct queue_item *qi, uint16_t vcid)
 {
 	struct local_queue_item *item;
 	if (sent_queues[vcid].inqueue > 0) {
@@ -128,22 +128,22 @@ sent_queue_head(struct queue_item *qi, uint16_t vcid)
 
 
 bool
-rx_queue_full(uint8_t vcid)
+tc_rx_queue_full(uint16_t vcid)
 {
 	return rx_queues[vcid].inqueue == rx_queues[vcid].capacity ? true : false;
 }
 
 bool
-tx_queue_full()
+tc_tx_queue_full()
 {
 	return uplink_channel.inqueue == uplink_channel.capacity ? true : false;
 }
 
 int
-tx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
+tc_tx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
 {
 	struct tc_transfer_frame *tc;
-	tc = (struct tc_transfer_frame *)get_tx_config(vcid);
+	tc = (struct tc_transfer_frame *)tc_get_tx_config(vcid);
 	int ret = enqueue(&uplink_channel, buffer);
 	if ((buffer[0] >> 5) & 0x01) {   // Type B
 		if ((buffer[0] >> 4) & 0x01) { // Control
@@ -170,25 +170,25 @@ tx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
 }
 
 int
-rx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
+tc_rx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
 {
 	int ret = enqueue(&rx_queues[vcid], buffer);
 	return ret;
 }
 
 int
-rx_queue_dequeue(uint8_t *buffer, uint16_t vcid)
+tc_rx_queue_dequeue(uint8_t *buffer, uint16_t vcid)
 {
 	int ret = dequeue(&rx_queues[vcid], buffer);
 	return ret;
 }
 
 int
-rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
+tc_rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
 {
 	int ret = enqueue(&rx_queues[vcid], buffer);
 	if (ret == 1) {
-		if (rx_queue_full(vcid)) {
+		if (tc_rx_queue_full(vcid)) {
 			ret = enqueue_now(&rx_queues[vcid], buffer);
 			return 0;
 		}
@@ -199,7 +199,7 @@ rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
 }
 
 struct tc_transfer_frame *
-get_rx_config(uint16_t vcid)
+tc_get_rx_config(uint16_t vcid)
 {
 	if (vcid == 1) {
 		return &tc_rx;
@@ -211,7 +211,7 @@ get_rx_config(uint16_t vcid)
 }
 
 struct tc_transfer_frame *
-get_tx_config(uint16_t vcid)
+tc_get_tx_config(uint16_t vcid)
 {
 	if (vcid == 1) {
 		return &tc_tx;
@@ -225,7 +225,7 @@ get_tx_config(uint16_t vcid)
 int
 cancel_lower_ops()
 {
-	int ret = tx_queue_clear();
+	int ret = tc_tx_queue_clear();
 	return ret;
 }
 
@@ -297,7 +297,7 @@ mark_bc_as_rt(uint16_t vcid)
 }
 
 int
-rx_queue_clear(uint8_t vcid)
+tc_rx_queue_clear(uint16_t vcid)
 {
 	reset_queue(&rx_queues[vcid]);
 	return 0;
@@ -349,37 +349,42 @@ setup_queues(uint16_t up_chann_item_size,
 		           rx_item_size,
 		           rx_capacity);
 		assert_int_equal(ret, 0);
+
+		ret = init(&tx_queues[i],
+		           TM_MAX_FRAME_LEN,
+		           TM_TX_CAPACITY);
+		assert_int_equal(ret, 0);
 	}
 	return 0;
 }
 
 int
-setup_configs(struct tc_transfer_frame *tc_tx,
-              struct tc_transfer_frame *tc_rx,
-              struct cop_config *fop_conf, struct cop_config *farm_conf,
-              struct fop_config *fop, struct farm_config *farm,
-              uint16_t scid, uint16_t max_frame_size,
-              uint8_t vcid, uint8_t mapid, tc_crc_flag_t crc,
-              tc_seg_hdr_t seg_hdr, tc_bypass_t bypass, tc_ctrl_t ctrl,
-              uint8_t fop_slide_wnd, fop_state_t fop_init_st,
-              uint16_t fop_t1_init, uint16_t fop_timeout_type,
-              uint8_t fop_tx_limit, farm_state_t farm_init_st,
-              uint8_t farm_wnd_width)
+setup_tm_configs(struct tc_transfer_frame *tc_tx,
+                 struct tc_transfer_frame *tc_rx,
+                 struct cop_config *fop_conf, struct cop_config *farm_conf,
+                 struct fop_config *fop, struct farm_config *farm,
+                 uint16_t scid, uint16_t max_frame_size,
+                 uint8_t vcid, uint8_t mapid, tc_crc_flag_t crc,
+                 tc_seg_hdr_t seg_hdr, tc_bypass_t bypass, tc_ctrl_t ctrl,
+                 uint8_t fop_slide_wnd, fop_state_t fop_init_st,
+                 uint16_t fop_t1_init, uint16_t fop_timeout_type,
+                 uint8_t fop_tx_limit, farm_state_t farm_init_st,
+                 uint8_t farm_wnd_width)
 {
 	int ret;
-	ret = prepare_fop(fop, fop_slide_wnd,
-	                  fop_init_st, fop_t1_init,
-	                  fop_timeout_type, fop_tx_limit);
+	prepare_fop(fop, fop_slide_wnd,
+	            fop_init_st, fop_t1_init,
+	            fop_timeout_type, fop_tx_limit);
 	memcpy(&fop_conf->fop, fop, sizeof(struct fop_config));
 	//cop_tx.fop = fop;
-	ret = tc_init(tc_tx, scid, MAX_SDU_SIZE,
+	ret = tc_init(tc_tx, scid, TC_MAX_SDU_SIZE,
 	              max_frame_size, vcid, mapid, crc,
 	              seg_hdr, bypass, ctrl, util_tx, *fop_conf);
 	assert_int_not_equal(ret, 1);
-	ret = prepare_farm(farm, farm_init_st, farm_wnd_width);
+	prepare_farm(farm, farm_init_st, farm_wnd_width);
 	memcpy(&farm_conf->farm, farm, sizeof(struct farm_config));
 	//farm_conf.farm = farm;
-	ret = tc_init(tc_rx, scid, MAX_SDU_SIZE,
+	ret = tc_init(tc_rx, scid, TC_MAX_SDU_SIZE,
 	              max_frame_size, vcid, mapid, crc,
 	              seg_hdr, bypass, ctrl, util_rx, *farm_conf);
 	assert_int_not_equal(ret, 1);
@@ -396,6 +401,8 @@ main()
 		cmocka_unit_test(test_unlock_cmd),
 		cmocka_unit_test(test_vr),
 		cmocka_unit_test(test_operation),
+		cmocka_unit_test(test_tm_no_stuffing),
+		cmocka_unit_test(test_tm_with_stuffing)
 	};
 	return cmocka_run_group_tests(tests, NULL, NULL);
 }

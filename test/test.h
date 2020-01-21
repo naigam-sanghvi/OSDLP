@@ -32,7 +32,8 @@
 #include "queue_util.h"
 
 #define NUMVCS	           3
-#define MAX_SDU_SIZE	   1024
+#define TC_MAX_SDU_SIZE	   1024
+#define TM_TX_CAPACITY     10
 
 struct queue  	           wait_queues[NUMVCS];     /* Wait queue */
 struct queue	           sent_queues[NUMVCS];     /* Sent queue */
@@ -50,11 +51,11 @@ struct tc_transfer_frame   tc_tx_unseg;
 struct tc_transfer_frame   tc_rx_unseg;
 
 /* Utility buffers */
-uint8_t                    util_tx[MAX_SDU_SIZE];
-uint8_t                    util_rx[MAX_SDU_SIZE];
+uint8_t                    util_tx[TC_MAX_SDU_SIZE];
+uint8_t                    util_rx[TC_MAX_SDU_SIZE];
 
-uint8_t                    util_tx_unseg[MAX_SDU_SIZE];
-uint8_t                    util_rx_unseg[MAX_SDU_SIZE];
+uint8_t                    util_tx_unseg[TC_MAX_SDU_SIZE];
+uint8_t                    util_rx_unseg[TC_MAX_SDU_SIZE];
 uint8_t                    test_util[TC_MAX_FRAME_LEN];
 uint8_t                    temp[TC_MAX_FRAME_LEN];
 
@@ -69,11 +70,16 @@ struct fop_config          fop_unseg;
 struct farm_config         farm_unseg;
 
 struct local_queue_item {
-	uint8_t 	fdu[MAX_SDU_SIZE];
+	uint8_t 	fdu[TC_MAX_SDU_SIZE];
 	uint8_t 	rt_flag;
 	uint8_t		seq_num;
 	tc_bypass_t type;
 };
+
+struct tm_transfer_frame   tm_tx;
+struct tm_transfer_frame   tm_rx;
+struct queue  	           tx_queues[NUMVCS];     /* TM TX queues */
+
 
 int
 setup_queues(uint16_t up_chann_item_size,
@@ -87,17 +93,19 @@ setup_queues(uint16_t up_chann_item_size,
              uint16_t rx_capacity);
 
 int
-setup_configs(struct tc_transfer_frame *tc_tx,
-              struct tc_transfer_frame *tc_rx,
-              struct cop_config *fop_conf, struct cop_config *farm_conf,
-              struct fop_config *fop, struct farm_config *farm,
-              uint16_t scid, uint16_t max_frame_size,
-              uint8_t vcid, uint8_t mapid, tc_crc_flag_t crc,
-              tc_seg_hdr_t seg_hdr, tc_bypass_t bypass, tc_ctrl_t ctrl,
-              uint8_t fop_slide_wnd, fop_state_t fop_init_st,
-              uint16_t fop_t1_init, uint16_t fop_timeout_type,
-              uint8_t fop_tx_limit, farm_state_t farm_init_st,
-              uint8_t farm_wnd_width);
+setup_tm_configs(struct tc_transfer_frame *tc_tx,
+                 struct tc_transfer_frame *tc_rx,
+                 struct cop_config *fop_conf, struct cop_config *farm_conf,
+                 struct fop_config *fop, struct farm_config *farm,
+                 uint16_t scid, uint16_t max_frame_size,
+                 uint8_t vcid, uint8_t mapid, tc_crc_flag_t crc,
+                 tc_seg_hdr_t seg_hdr, tc_bypass_t bypass, tc_ctrl_t ctrl,
+                 uint8_t fop_slide_wnd, fop_state_t fop_init_st,
+                 uint16_t fop_t1_init, uint16_t fop_timeout_type,
+                 uint8_t fop_tx_limit, farm_state_t farm_init_st,
+                 uint8_t farm_wnd_width);
+
+
 
 void
 test_tm(void **state);
@@ -131,5 +139,11 @@ test_operation(void **state);
 
 void
 test_vr(void **state);
+
+void
+test_tm_no_stuffing(void **state);
+
+void
+test_tm_with_stuffing(void **state);
 
 #endif /* TEST_TEST_H_ */

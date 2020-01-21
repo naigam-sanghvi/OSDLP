@@ -19,7 +19,7 @@
 
 #include "clcw.h"
 
-int
+void
 clcw_pack(struct clcw_frame *clcw_params, uint8_t *packet)
 {
 	packet[0] 	= ((clcw_params->ctrl_word_type & 0x01) << 7);
@@ -39,10 +39,9 @@ clcw_pack(struct clcw_frame *clcw_params, uint8_t *packet)
 	packet[2]	|= (clcw_params->rsvd_spare2 & 0x01);
 
 	packet[3]	= clcw_params->report_value;
-	return 0;
 }
 
-int
+void
 clcw_unpack(struct clcw_frame *clcw_params, uint8_t *packet)
 {
 	clcw_params->ctrl_word_type = ((packet[0] >> 7) & 0x01);
@@ -62,7 +61,6 @@ clcw_unpack(struct clcw_frame *clcw_params, uint8_t *packet)
 	clcw_params->rsvd_spare2 = (packet[2] & 0x01);
 
 	clcw_params->report_value = packet[3];
-	return 0;
 }
 
 

@@ -28,13 +28,16 @@
 /**
  * The maximum allowed frame size
  */
-#define MAX_FRAME_LEN                   	1024
-#define TM_VERSION_NUMBER					0
-#define TM_SEC_HDR_VERSION_NUMBER			0
-#define	TM_PRIMARY_HDR_LEN					6
-#define	TM_OCF_LENGTH						4
-#define TM_CRC_LENGTH						2
-#define	TM_FIRST_HDR_PTR_NO_PKT_START		0x07FF
+#define TM_MAX_FRAME_LEN                    256
+#define TM_VERSION_NUMBER                   0
+#define TM_SEC_HDR_VERSION_NUMBER           0
+#define	TM_PRIMARY_HDR_LEN                  6
+#define	TM_OCF_LENGTH                       4
+#define TM_CRC_LENGTH                       2
+#define	TM_FIRST_HDR_PTR_NO_PKT_START       0x07FF
+#define TM_FIRST_HDR_PTR_OID                0x07FE
+#define TM_IDLE_PACKET                      0x07 << 5
+#define TM_MAX_SDU_LEN                      1024
 
 typedef enum {
 	TM_OCF_NOTPRESENT 	= 0,
@@ -47,41 +50,61 @@ typedef enum {
 } tm_crc_flag_t;
 
 typedef enum {
-	TM_SEC_HDR_NOTPRESENT 	= 0,
-	TM_SEC_HDR_PRESENT 		= 1
+	TM_SEC_HDR_NOTPRESENT   = 0,
+	TM_SEC_HDR_PRESENT      = 1
 } tm_sec_hdr_flag_t;
 
 typedef enum {
-	TYPE_OS_ID 		= 0,
-	TYPE_VCA_SDU 	= 1
+	TYPE_OS_ID      = 0,
+	TYPE_VCA_SDU    = 1
 } tm_sync_flag_t;
 
+/*State of reception of segmented FDUs*/
+typedef enum {
+	TM_LOOP_OPEN		= 0,
+	TM_LOOP_CLOSED		= 1
+} tm_loop_state_t;
+
+typedef enum {
+	TM_STUFFING_ON      = 0,
+	TM_STUFFING_OFF     = 1
+} tm_stuff_state_t;
+
+typedef enum {
+	TM_RX_OK            = 0,
+	TM_RX_PENDING       = 1,
+	TM_RX_ERROR         = 2,
+	TM_RX_OID           = 3,
+	TM_RX_DENIED        = 4
+} tm_rx_status_t;
+
 struct tm_master_channel_id {
-	uint8_t		version_num 	: 2;
-	uint16_t	spacecraft_id	: 10;
+	uint8_t		version_num     : 2;
+	uint16_t	spacecraft_id   : 10;
 };
 
 /**
  * Data field status struct
  */
 struct tm_df_status {
-	uint8_t					sec_hdr			: 1;
-	uint8_t					sync			: 1;
-	uint8_t					pkt_order 		: 1;
-	uint8_t					seg_len_id		: 2;
-	uint16_t				first_hdr_ptr	: 11;
+	uint8_t					sec_hdr         : 1;
+	uint8_t					sync            : 1;
+	uint8_t					pkt_order       : 1;
+	uint8_t					seg_len_id      : 2;
+	uint16_t				first_hdr_ptr   : 11;
 };
 
 /**
  * Data field status of primary header
  */
 struct tm_primary_hdr {
-	struct tm_master_channel_id 	mcid;
-	uint8_t							vcid 			: 3;
-	uint8_t							ocf				: 1;
-	uint8_t							*mc_frame_cnt;			// This field needs to be shared among all vcs
-	uint8_t							vc_frame_cnt;
-	struct tm_df_status				status;
+	struct tm_master_channel_id     mcid;
+	uint8_t                         vcid            : 3;
+	uint8_t                         ocf             : 1;
+	uint8_t
+	*mc_frame_cnt;			// This field needs to be shared among all vcs
+	uint8_t                         vc_frame_cnt;
+	struct tm_df_status             status;
 };
 
 /**
@@ -89,37 +112,49 @@ struct tm_primary_hdr {
  */
 struct tm_sec_hdr_id {
 	uint8_t		version_num : 2;
-	uint8_t		length		: 6;
+	uint8_t		length      : 6;
 };
 
 /**
  * Secondary header struct
  */
 struct tm_sec_hdr {
-	struct tm_sec_hdr_id		sec_hdr_id;
-	uint8_t						*sec_hdr_data_field;
+	struct tm_sec_hdr_id       sec_hdr_id;
+	uint8_t                    *sec_hdr_data_field;
 };
 
 /**
  * Mission parameters struct
  */
+
+struct tm_util_buf {
+	uint8_t            *buffer;
+	uint16_t            buffered_length;
+	uint8_t             loop_state;
+	uint16_t            expected_pkt_len;
+};
+
 struct tm_mission_params {
-	uint16_t					frame_len;			/* Fixed frame length*/
-	uint16_t					header_len;			/* Header length - Including secondary if present*/
-	uint16_t					max_data_len;		/* Maximum allowed data size per FDU*/
-	uint8_t						crc_present;		/* CRC present flag*/
-	uint16_t					max_vcs;			/* Max number oc VCs allowed*/
-	uint16_t					tx_fifo_max_size;	/* Max TX FIFO capacity*/
-	uint8_t						idle_packet;		/* Idle packet for stuffing*/
+	struct tm_util_buf          util;
+	uint16_t                    frame_len;			/* Fixed frame length*/
+	uint16_t
+	header_len;			/* Header length - Including secondary if present*/
+	uint16_t
+	max_data_len;		/* Maximum allowed data size per FDU*/
+	uint8_t                     crc_present;		/* CRC present flag*/
+	uint16_t                    max_vcs;			/* Max number oc VCs allowed*/
+	uint16_t                    tx_fifo_max_size;	/* Max TX FIFO capacity*/
+	uint8_t                     vcid;
+	uint8_t                     stuff_state;
 };
 
 struct tm_transfer_frame {
-	struct tm_primary_hdr		primary_hdr;		/* The primary header struct*/
-	struct tm_sec_hdr			secondary_hdr;		/* The secondary header struct*/
-	uint32_t					ocf;				/* The OCF struct */
-	uint16_t					crc;				/* CRC value*/
-	uint8_t					*data;				/* Pointer to FDU*/
-	struct tm_mission_params	mission;			/* Mission specific parameters*/
+	struct tm_primary_hdr       primary_hdr;        /* The primary header struct*/
+	struct tm_sec_hdr           secondary_hdr;      /* The secondary header struct*/
+	uint32_t                    ocf;                /* The OCF struct */
+	uint16_t                    crc;                /* CRC value*/
+	uint8_t                     *data;              /* Pointer to FDU*/
+	struct tm_mission_params    mission;            /* Mission specific parameters*/
 };
 
 /**
@@ -140,9 +175,8 @@ struct tm_transfer_frame {
  * @param crc_flag flag for the presence or not of CRC
  * @param frame_len Fixed frame length
  * @param max_vcs Max number oc VCs allowed
- * @param fifo_max_size Max TX FIFO capacity
- *
- * @param
+ * @param stuffing Indicates if packet stuffing is on
+ * @param util_buffer a utility buffer with size MAX_SDU_SIZE
  */
 int
 tm_init(struct tm_transfer_frame *tm_tf,
@@ -157,9 +191,10 @@ tm_init(struct tm_transfer_frame *tm_tf,
         uint8_t *sec_hdr,
         uint32_t ocf,
         tm_crc_flag_t crc_flag,
-        uint16_t frame_len,
+        uint16_t frame_size,
         uint16_t max_vcs,
-        uint16_t fifo_max_size);
+        tm_stuff_state_t stuffing,
+        uint8_t *util_buffer);
 
 /**
  * Packs a TM structure into a buffer to be transmitted
@@ -168,7 +203,7 @@ tm_init(struct tm_transfer_frame *tm_tf,
  * @param data_in the input data buffer
  * @param length the length of the data_in buffer
  */
-int
+void
 tm_pack(struct tm_transfer_frame *frame_params, uint8_t *pkt_out,
         uint8_t *data_in, uint16_t length);
 
@@ -178,7 +213,88 @@ tm_pack(struct tm_transfer_frame *frame_params, uint8_t *pkt_out,
  * @param frame_params the TM config struct
  * @param pkt_in the received packet buffer
  */
-int
+void
 tm_unpack(struct tm_transfer_frame *frame_params, uint8_t *pkt_in);
+
+int
+tm_transmit(struct tm_transfer_frame *tm_tf,
+            uint8_t *data_in, uint16_t length);
+
+tm_rx_status_t
+tm_receive(struct tm_transfer_frame *tm_tf,
+           uint8_t *data_in);
+
+/**
+ * Transmits an FDU with idle packets only
+ */
+int
+tm_transmit_idle_fdu(struct tm_transfer_frame *tm_tf, uint8_t vcid);
+
+/**
+ * Aborts an ongoing segmentation procedure
+ */
+void
+abort_segmentation(struct tm_transfer_frame *tm_tf);
+
+/**
+ * Disables the stuffing of packets into FDUs
+ */
+void
+disable_packet_stuffing(struct tm_transfer_frame *tm_tf);
+
+/**
+ * Enables the stuffing of packets into FDUs
+ */
+void
+enable_packet_stuffing(struct tm_transfer_frame *tm_tf);
+
+/**
+ * Checks if tx queue is empty
+ * @param the vcid
+ */
+__attribute__((weak))
+bool
+tm_tx_queue_empty(uint8_t);
+
+/**
+ * Checks if tx queue is empty
+ * @param the vcid
+ */
+__attribute__((weak))
+uint8_t *
+tm_tx_queue_back(uint8_t);
+
+/**
+ * Puts an item at the back of the TX queue
+ * @param the vcid
+ */
+__attribute__((weak))
+int
+tm_tx_queue_enqueue(uint8_t *, uint8_t);
+
+/**
+ * Puts an item at the back of the RX queue
+ * @param pointer to the memory space of the packet
+ * @param the vcid
+ */
+__attribute__((weak))
+int
+tm_rx_queue_enqueue(uint8_t *, uint8_t);
+
+/**
+ * Returns the length of the packet pointed to by
+ * the pointer
+ * @param pointer to the variable where the length
+ * will be stored
+ * @param the pointer to the packet
+ * @param the length of the memory space pointed
+ * to by the pointer where the user is allowed to
+ * search for the packet length field
+ *
+ * Returns 0 for success, 1 otherwise
+ */
+__attribute__((weak))
+int
+tm_get_packet_len(uint16_t *, uint8_t *, uint16_t);
 
 #endif /* INC_TM_H_ */

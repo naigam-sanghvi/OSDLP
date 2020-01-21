@@ -29,7 +29,7 @@ test_vr(void **state)
 	uint16_t      sent_item_size = sizeof(struct local_queue_item);
 	uint16_t      sent_capacity = 10;
 	uint16_t      wait_item_size = sizeof(struct tc_transfer_frame);
-	uint16_t      rx_item_size = MAX_SDU_SIZE;
+	uint16_t      rx_item_size = TC_MAX_SDU_SIZE;
 	uint16_t      rx_capacity = 10;
 
 	uint16_t      scid = 101;
@@ -62,17 +62,17 @@ test_vr(void **state)
 
 	struct clcw_frame clcw;
 	int ret;
-	setup_configs(&tc_tx, &tc_rx,
-	              &cop_tx, &cop_rx,
-	              &fop, &farm,
-	              scid, max_frame_size,
-	              vcid, mapid, crc,
-	              seg_hdr, bypass,
-	              ctrl, fop_slide_wnd,
-	              fop_init_st, fop_t1_init,
-	              fop_timeout_type, fop_tx_limit,
-	              farm_init_st, farm_wnd_width);         /*Prepare config structs*/
-	uint8_t buf[MAX_SDU_SIZE];
+	setup_tm_configs(&tc_tx, &tc_rx,
+	                 &cop_tx, &cop_rx,
+	                 &fop, &farm,
+	                 scid, max_frame_size,
+	                 vcid, mapid, crc,
+	                 seg_hdr, bypass,
+	                 ctrl, fop_slide_wnd,
+	                 fop_init_st, fop_t1_init,
+	                 fop_timeout_type, fop_tx_limit,
+	                 farm_init_st, farm_wnd_width);         /*Prepare config structs*/
+	uint8_t buf[TC_MAX_SDU_SIZE];
 	int size = 150;
 	for (int i = 0; i < size; i++) {
 		buf[i] = rand() % 256;
@@ -84,14 +84,13 @@ test_vr(void **state)
 
 
 	/* Prepare clcw */
-	ret = prepare_clcw(&tc_rx_unseg, &clcw);
+	prepare_clcw(&tc_rx_unseg, &clcw);
 
 	/* Handle response */
 	notif = handle_clcw(&tc_tx, &clcw);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	ret = prepare_typea_data_frame(&tc_tx, buf, size);
-	assert_int_equal(0, ret);
+	prepare_typea_data_frame(&tc_tx, buf, size);
 
 	/* Transmit two frames */
 	notif = tc_transmit(&tc_tx, buf, size);
@@ -106,11 +105,10 @@ test_vr(void **state)
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_ENQ);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
-	assert_int_equal(clcw.report_value, 1);
+	prepare_clcw(&tc_rx, &clcw);
 
 	notif = handle_clcw(&tc_tx, &clcw);
 	assert_int_equal(notif, ACCEPT_TX);
@@ -118,10 +116,10 @@ test_vr(void **state)
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_ENQ);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.report_value, 2);
 
 	notif = handle_clcw(&tc_tx, &clcw);
@@ -146,10 +144,10 @@ test_vr(void **state)
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_DISCARD);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.lockout, 1);
 
 	notif = terminate_ad(&tc_tx);
@@ -166,17 +164,16 @@ test_vr(void **state)
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_OK);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.lockout, 0);
 
 	notif = handle_clcw(&tc_tx, &clcw);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	ret = prepare_typea_data_frame(&tc_tx, buf, size);
-	assert_int_equal(0, ret);
+	prepare_typea_data_frame(&tc_tx, buf, size);
 
 	notif = tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(notif, ACCEPT_TX);
@@ -184,10 +181,10 @@ test_vr(void **state)
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_ENQ);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.lockout, 0);
 
 
@@ -205,10 +202,10 @@ test_vr(void **state)
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_OK);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.lockout, 0);
 
 	notif = handle_clcw(&tc_tx, &clcw);
@@ -217,63 +214,58 @@ test_vr(void **state)
 	/* Transmit a packet */
 
 	/* Set VS to 254 */
-	ret = prepare_typea_data_frame(&tc_tx, buf, size);
-	assert_int_equal(0, ret);
+	prepare_typea_data_frame(&tc_tx, buf, size);
 	tc_tx.cop_cfg.fop.vs = 255;	/*Inside positive window of FARM */
-	ret = tc_pack(&tc_tx, test_util, buf, size);
-	tx_queue_enqueue(test_util, 1);
+	tc_pack(&tc_tx, test_util, buf, size);
+	ret = tc_tx_queue_enqueue(test_util, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_DISCARD);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.rt, 1);
 
 
 
 	/* Set VS to 0 */
-	ret = prepare_typea_data_frame(&tc_tx, buf, size);
-	assert_int_equal(0, ret);
+	prepare_typea_data_frame(&tc_tx, buf, size);
 	tc_tx.cop_cfg.fop.vs = 0;	/*Inside positive window of FARM */
-	ret = tc_pack(&tc_tx, test_util, buf, size);
-	tx_queue_enqueue(test_util, 1);
+	tc_pack(&tc_tx, test_util, buf, size);
+	tc_tx_queue_enqueue(test_util, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_DISCARD);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.report_value, 254);
 
 
 	/* Send two correct packets */
 	tc_tx.cop_cfg.fop.vs = 254;
-	ret = prepare_typea_data_frame(&tc_tx, buf, size);
-	assert_int_equal(0, ret);
-
+	prepare_typea_data_frame(&tc_tx, buf, size);
 	notif = tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(notif, ACCEPT_TX);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_ENQ);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.report_value, 255);
 
 	notif = handle_clcw(&tc_tx, &clcw);
 
 	/* Transmit a packet */
 
-	ret = prepare_typea_data_frame(&tc_tx, buf, size);
-	assert_int_equal(0, ret);
+	prepare_typea_data_frame(&tc_tx, buf, size);
 
 	notif = tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(notif, ACCEPT_TX);
@@ -281,18 +273,17 @@ test_vr(void **state)
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_ENQ);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.report_value, 0);
 
 	notif = handle_clcw(&tc_tx, &clcw);
 
 	/* Transmit a packet */
 
-	ret = prepare_typea_data_frame(&tc_tx, buf, size);
-	assert_int_equal(0, ret);
+	prepare_typea_data_frame(&tc_tx, buf, size);
 
 	notif = tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(notif, ACCEPT_TX);
@@ -300,10 +291,10 @@ test_vr(void **state)
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_ENQ);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.report_value, 1);
 
 	notif = handle_clcw(&tc_tx, &clcw);
@@ -311,33 +302,33 @@ test_vr(void **state)
 	/* Set VS to 255 */
 
 	tc_tx.cop_cfg.fop.vs = 255;	/*Inside negative window of FARM */
-	ret = tc_pack(&tc_tx, test_util, buf, size);
-	tx_queue_enqueue(test_util, 1);
+	tc_pack(&tc_tx, test_util, buf, size);
+	tc_tx_queue_enqueue(test_util, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_DISCARD);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.report_value, 1);
 
 	/* Set VS to 0 */
 
-	ret = prepare_typea_data_frame(&tc_tx, buf, size);
-	assert_int_equal(0, ret);
+	prepare_typea_data_frame(&tc_tx, buf, size);
+
 	tc_tx.cop_cfg.fop.vs = 0;	/*Inside positive window of FARM */
-	ret = tc_pack(&tc_tx, test_util, buf, size);
-	tx_queue_enqueue(test_util, 1);
+	tc_pack(&tc_tx, test_util, buf, size);
+	tc_tx_queue_enqueue(test_util, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	farm_ret = tc_receive(test_util, MAX_FRAME_LEN);
+	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(farm_ret, COP_DISCARD);
 
-	ret = prepare_clcw(&tc_rx, &clcw);
+	prepare_clcw(&tc_rx, &clcw);
 	assert_int_equal(clcw.report_value, 1);
 }
 

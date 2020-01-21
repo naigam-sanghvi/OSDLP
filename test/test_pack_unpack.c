@@ -36,25 +36,22 @@ test_tm(void **state)
 	tm_ocf_flag_t ocf 	= TM_OCF_NOTPRESENT;
 	uint16_t frame_len 	= 300;
 	uint8_t maxvcs 		= 2;
-	uint8_t maxfifo 	= 10;
 	int ret = tm_init(&tm_tx, scid,
 	                  &cnt, vcid, mcid, ocf,
 	                  0, 0, 0, NULL, 0, crc,
-	                  frame_len, maxvcs, maxfifo);
+	                  frame_len, maxvcs, TM_STUFFING_OFF, util_tx);
 	assert_int_equal(0, ret);
 
 	ret = tm_init(&tm_rx, 0,
 	              &cnt, 0, 0, 0, 0, 0,
 	              0, NULL, 0, crc,
-	              frame_len, maxvcs, maxfifo);
+	              frame_len, maxvcs, TM_STUFFING_OFF, util_tx);
 	assert_int_equal(0, ret);
 
 
-	ret = tm_pack(&tm_tx, tx_buf, data, 100);
-	assert_int_equal(0, ret);
+	tm_pack(&tm_tx, tx_buf, data, 100);
 
-	ret = tm_unpack(&tm_rx, tx_buf);
-	assert_int_equal(0, ret);
+	tm_unpack(&tm_rx, tx_buf);
 
 	assert_int_equal(tm_tx.primary_hdr.ocf, tm_rx.primary_hdr.ocf);
 	assert_int_equal(tm_tx.primary_hdr.mcid.spacecraft_id,
@@ -99,11 +96,9 @@ test_tc(void **state)
 	assert_int_equal(0, ret);
 
 
-	ret = tc_pack(&tc_tx, tx_buf, data, 100);
-	assert_int_equal(0, ret);
+	tc_pack(&tc_tx, tx_buf, data, 100);
 
-	ret = tc_unpack(&tc_rx, tx_buf);
-	assert_int_equal(0, ret);
+	tc_unpack(&tc_rx, tx_buf);
 
 	assert_int_equal(tc_tx.primary_hdr.bypass, tc_rx.primary_hdr.bypass);
 	assert_int_equal(tc_tx.primary_hdr.spacecraft_id,

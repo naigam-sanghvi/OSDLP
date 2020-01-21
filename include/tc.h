@@ -26,186 +26,187 @@
 /**
  * The maximum allowed frame size
  */
-#define TC_MAX_FRAME_LEN			256
-#define TC_VERSION_NUMBER		    0
-#define		UNLOCK_CMD		0
-#define		SETVR_BYTE1		0x82
-#define		SETVR_BYTE2		0
+#define TC_MAX_FRAME_LEN            256
+#define TC_VERSION_NUMBER           0
+#define UNLOCK_CMD                  0
+#define SETVR_BYTE1                 0x82
+#define SETVR_BYTE2                 0
 
 typedef enum {
-	TYPE_A 		= 0,
-	TYPE_B		= 1
+	TYPE_A      = 0,
+	TYPE_B      = 1
 } tc_bypass_t;
 
 typedef enum {
-	TC_DATA		= 0,
-	TC_COMMAND	= 1
+	TC_DATA     = 0,
+	TC_COMMAND  = 1
 } tc_ctrl_t;
 
 /*State of reception of segmented FDUs*/
 typedef enum {
-	LOOP_OPEN		= 0,
-	LOOP_CLOSED		= 1
-} loop_state_t;
+	TC_LOOP_OPEN        = 0,
+	TC_LOOP_CLOSED      = 1
+} tc_loop_state_t;
 
 typedef enum {
-	TC_CRC_NOTPRESENT 	= 0,
-	TC_CRC_PRESENT 		= 1
+	TC_CRC_NOTPRESENT   = 0,
+	TC_CRC_PRESENT      = 1
 } tc_crc_flag_t;
 
 typedef enum {
-	TC_SEG_HDR_NOTPRESENT	= 0,
-	TC_SEG_HDR_PRESENT		= 1
+	TC_SEG_HDR_NOTPRESENT   = 0,
+	TC_SEG_HDR_PRESENT      = 1
 } tc_seg_hdr_t;
 
 typedef enum {
-	SEG_ENDED		= 0,
-	SEG_IN_PROGRESS	= 1
+	SEG_ENDED           = 0,
+	SEG_IN_PROGRESS     = 1
 } seg_status_t;
 
 typedef enum {
-	COP_OK 				= 0,
-	COP_ENQ				= 1,
-	COP_PRIORITY_ENQ 	= 2,
-	COP_DISCARD 		= 3,
-	COP_ERROR			= 4
+	COP_OK              = 0,
+	COP_ENQ             = 1,
+	COP_PRIORITY_ENQ    = 2,
+	COP_DISCARD         = 3,
+	COP_ERROR           = 4
 } farm_result_t;
 
 struct tc_primary_hdr {
-	uint8_t				version_num 	: 2;	/* TC version number*/
-	uint8_t				bypass			: 1;	/* Bypass flag*/
-	uint8_t				ctrl_cmd		: 1;	/* Control command*/
-	uint8_t				rsvd_spare		: 2;	/* Raserved - spare*/
-	uint16_t			spacecraft_id	: 10;	/* Spacecraft ID*/
-	uint8_t				vcid 			: 6;	/* Cirtual Channel ID*/
-	uint16_t			frame_len		: 10;	/* Frame length (Total octets - 1)*/
-	uint8_t				frame_seq_num;			/* Frame sequence number*/
+	uint8_t             version_num     : 2;    /* TC version number*/
+	uint8_t             bypass          : 1;    /* Bypass flag*/
+	uint8_t             ctrl_cmd        : 1;    /* Control command*/
+	uint8_t             rsvd_spare      : 2;    /* Raserved - spare*/
+	uint16_t            spacecraft_id   : 10;   /* Spacecraft ID*/
+	uint8_t             vcid            : 6;    /* Cirtual Channel ID*/
+	uint16_t            frame_len       : 10;   /* Frame length (Total octets - 1)*/
+	uint8_t             frame_seq_num;          /* Frame sequence number*/
 };
 
 /**
  * Sequence flag type
  */
 typedef enum {
-	TC_CONT_SEG 	= 0,
-	TC_FIRST_SEG 	= 1,
-	TC_LAST_SEG 	= 2,
-	TC_UNSEG 		= 3
+	TC_CONT_SEG     = 0,
+	TC_FIRST_SEG    = 1,
+	TC_LAST_SEG     = 2,
+	TC_UNSEG        = 3
 } tc_seq_flag_t;
 
 struct tc_seg_hdr {
-	uint8_t			seq_flag 	: 2; 	/* Sequence flag*/
-	uint8_t			map_id		: 6;	/* MAP ID*/
+	uint8_t         seq_flag    : 2;    /* Sequence flag*/
+	uint8_t         map_id      : 6;    /* MAP ID*/
 };
 
 /**
  * Frame data field struct
  */
 struct	tc_fdf {
-	struct tc_seg_hdr	seg_hdr;
-	uint8_t 			*data;
-	uint16_t			data_len;
+	struct tc_seg_hdr   seg_hdr;
+	uint8_t             *data;
+	uint16_t            data_len;
 };
 
 /**
  * Utility buffer for use in segmentation operations
  */
-struct util_buf {
-	uint8_t			*buffer;
-	uint16_t 			buffered_length;
-	uint8_t				loop_state;
+struct tc_util_buf {
+	uint8_t             *buffer;
+	uint16_t            buffered_length;
+	uint8_t             loop_state;
 };
 
 /**
  * Mission specific parameters
  */
 struct tc_mission_params {
-	struct	util_buf	util;
-	uint8_t				crc_flag;			/**/
-	uint8_t				seg_hdr_flag;
-	uint16_t			max_sdu_size;		/* Maximum size of higher layer frame*/
-	uint16_t			max_data_size;		/* Maximum size of data portion of packet*/
-	uint16_t			max_frame_size;		/* Maximum size of frame*/
-	uint16_t			fixed_overhead_len;
-	uint16_t			spacecraft_id;		/* Spacecraft ID*/
-	uint8_t				vcid; 				/* Cirtual Channel ID*/
-	uint8_t				version_num;
-	uint8_t				unlock_cmd;
-	uint8_t				set_vr_cmd[3];
+	struct tc_util_buf  util;
+	uint8_t             crc_flag;
+	uint8_t             seg_hdr_flag;
+	uint16_t            max_sdu_size;       /* Maximum size of higher layer frame*/
+	uint16_t
+	max_data_size;      /* Maximum size of data portion of packet*/
+	uint16_t            max_frame_size;     /* Maximum size of frame*/
+	uint16_t            fixed_overhead_len;
+	uint16_t            spacecraft_id;      /* Spacecraft ID*/
+	uint8_t             vcid;               /* Cirtual Channel ID*/
+	uint8_t             version_num;
+	uint8_t             unlock_cmd;
+	uint8_t             set_vr_cmd[3];
 };
 
 /**
  * Segmentation status struct
  */
 struct segment_status {
-	uint8_t		flag;
-	uint16_t	octets_txed;
+	uint8_t     flag;
+	uint16_t    octets_txed;
 };
 
 struct farm_config {
-	uint8_t		state;
-	uint8_t		lockout;
-	uint8_t		wait;
-	uint8_t		retransmit;
-	uint8_t		vr;
-	uint8_t		farmb_cnt;
-	uint8_t		w;
-	uint8_t		pw;
-	uint8_t		nw;
+	uint8_t     state;
+	uint8_t     lockout;
+	uint8_t     wait;
+	uint8_t     retransmit;
+	uint8_t     vr;
+	uint8_t     farmb_cnt;
+	uint8_t     w;
+	uint8_t     pw;
+	uint8_t     nw;
 };
 
 typedef enum {
-	ACCEPT_DIR		= 0,
-	REJECT_DIR		= 1,
-	POSITIVE_DIR	= 2,
-	NEGATIVE_DIR	= 3,
-	SUSPEND			= 4,
-	ALERT_LIMIT		= 5,
-	ALERT_T1		= 6,
-	ALERT_LOCKOUT	= 7,
-	ALERT_SYNCH		= 8,
-	ALERT_NNR		= 9,
-	ALERT_CLCW		= 10,
-	ALERT_LLIF		= 11,
-	ALERT_TERM		= 12,
-	ACCEPT_TX		= 13,
-	REJECT_TX		= 14,
-	POSITIVE_TX		= 15,
-	NEGATIVE_TX		= 16,
-	DELAY_RESP		= 17,
-	UNDEF_ERROR		= 18,
-	IGNORE			= 19,
-	NA				= 20
+	ACCEPT_DIR      = 0,
+	REJECT_DIR      = 1,
+	POSITIVE_DIR    = 2,
+	NEGATIVE_DIR    = 3,
+	SUSPEND         = 4,
+	ALERT_LIMIT     = 5,
+	ALERT_T1        = 6,
+	ALERT_LOCKOUT   = 7,
+	ALERT_SYNCH     = 8,
+	ALERT_NNR       = 9,
+	ALERT_CLCW      = 10,
+	ALERT_LLIF      = 11,
+	ALERT_TERM      = 12,
+	ACCEPT_TX       = 13,
+	REJECT_TX       = 14,
+	POSITIVE_TX     = 15,
+	NEGATIVE_TX     = 16,
+	DELAY_RESP      = 17,
+	UNDEF_ERROR     = 18,
+	IGNORE          = 19,
+	NA              = 20
 } notification_t;
 
 struct fop_config {
-	uint8_t			state;
-	uint8_t			vs;
-	uint8_t			out_flag;
-	uint8_t			nnr;
-	uint16_t		t1_init;
-	uint8_t			tx_lim;
-	uint8_t			tx_cnt;
-	uint8_t			slide_wnd;
-	uint8_t			tt;
-	uint8_t			ss;
-	notification_t 	signal;						/* This field is used as a way to signal
-	 	 	 	 	 	 	 	 	 	 	 	 higher layers from the COP-1*/
+	uint8_t         state;
+	uint8_t         vs;
+	uint8_t         out_flag;
+	uint8_t         nnr;
+	uint16_t        t1_init;
+	uint8_t         tx_lim;
+	uint8_t         tx_cnt;
+	uint8_t         slide_wnd;
+	uint8_t         tt;
+	uint8_t         ss;
+	notification_t  signal;   /* This field is used as a way to signal
+                              higher layers from the COP-1*/
 };
 
 struct cop_config {
 	union {
-		struct fop_config	fop;
-		struct farm_config 	farm;
+		struct fop_config   fop;
+		struct farm_config  farm;
 	};
 };
 
 struct tc_transfer_frame {
-	struct tc_primary_hdr		primary_hdr;	/* Primary header struct*/
-	struct tc_mission_params	mission;		/* Mission params*/
-	struct cop_config			cop_cfg;		/* COP configuration struct*/
-	struct tc_fdf				frame_data;		/* Frame data structure*/
-	struct segment_status		seg_status;		/* Segment status struct*/
-	uint16_t					crc;			/* CRC*/
+	struct tc_primary_hdr       primary_hdr;    /* Primary header struct*/
+	struct tc_mission_params    mission;        /* Mission params*/
+	struct cop_config           cop_cfg;        /* COP configuration struct*/
+	struct tc_fdf               frame_data;     /* Frame data structure*/
+	struct segment_status       seg_status;     /* Segment status struct*/
+	uint16_t                    crc;            /* CRC*/
 };
 
 int
@@ -227,7 +228,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
  * @param frame_params the TC config struct
  * @param pkt_in the received packet buffer
  */
-int
+void
 tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in);
 
 /**
@@ -237,25 +238,25 @@ tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in);
  * @param data_in the input data buffer
  * @param length the length of the data_in buffer
  */
-int
+void
 tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
         uint8_t *data_in, uint16_t length);
 
-int
+void
 prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
                          uint16_t size);
 
-int
+void
 prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
                          uint16_t size);
 
-int
+void
 prepare_typeb_unlock(struct tc_transfer_frame *tc_tf);
 
-int
+void
 prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr);
 
-int
+void
 prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw);
 
 int
@@ -273,7 +274,7 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length);
  */
 __attribute__((weak))
 struct tc_transfer_frame *
-get_rx_config(uint16_t);
+tc_get_rx_config(uint16_t);
 
 /**
  * Returns the configuration struct for the specific vcid
@@ -281,7 +282,7 @@ get_rx_config(uint16_t);
  */
 __attribute__((weak))
 struct tc_transfer_frame *
-get_tx_config(uint16_t);
+tc_get_tx_config(uint16_t);
 
 /**
  * Enqueues an item on the rx queue
@@ -291,7 +292,7 @@ get_tx_config(uint16_t);
  */
 __attribute__((weak))
 int
-rx_queue_enqueue(uint8_t *, uint16_t);
+tc_rx_queue_enqueue(uint8_t *, uint16_t);
 
 /**
  * Dequeues an item from the rx queue
@@ -301,7 +302,7 @@ rx_queue_enqueue(uint8_t *, uint16_t);
  */
 __attribute__((weak))
 int
-rx_queue_dequeue(uint8_t *, uint16_t);
+tc_rx_queue_dequeue(uint8_t *, uint16_t);
 
 /**
  * Enqueues an item on the rx queue even
@@ -313,6 +314,6 @@ rx_queue_dequeue(uint8_t *, uint16_t);
  */
 __attribute__((weak))
 int
-rx_queue_enqueue_now(uint8_t *, uint8_t);
+tc_rx_queue_enqueue_now(uint8_t *, uint8_t);
 
 #endif /* INCLUDE_TC_H_ */

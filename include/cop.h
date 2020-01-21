@@ -24,19 +24,19 @@
 #include <stdbool.h>
 #include "tc.h"
 
-#define		UNLOCK_CMD		0
-#define		SETVR_BYTE1		0x82
-#define		SETVR_BYTE2		0
+#define UNLOCK_CMD      0
+#define SETVR_BYTE1     0x82
+#define SETVR_BYTE2     0
 
 typedef enum {
 	FARM = 0,
-	FOP = 1
+	FOP  = 1
 } cop_type_t;
 
 typedef enum {
-	FARM_STATE_OPEN 		= 0,
-	FARM_STATE_WAIT 		= 1,
-	FARM_STATE_LOCKOUT 	    = 2
+	FARM_STATE_OPEN         = 0,
+	FARM_STATE_WAIT         = 1,
+	FARM_STATE_LOCKOUT      = 2
 } farm_state_t;
 
 typedef enum {
@@ -45,12 +45,12 @@ typedef enum {
 } rt_flag_t;
 
 typedef enum {
-	FOP_STATE_ACTIVE 		= 0,
-	FOP_STATE_RT_NO_WAIT 	= 1,
-	FOP_STATE_RT_WAIT		= 2,
-	FOP_STATE_INIT_NO_BC	= 3,
-	FOP_STATE_INIT_BC		= 4,
-	FOP_STATE_INIT			= 5
+	FOP_STATE_ACTIVE        = 0,
+	FOP_STATE_RT_NO_WAIT    = 1,
+	FOP_STATE_RT_WAIT       = 2,
+	FOP_STATE_INIT_NO_BC    = 3,
+	FOP_STATE_INIT_BC       = 4,
+	FOP_STATE_INIT          = 5
 } fop_state_t;
 
 /**
@@ -59,22 +59,22 @@ typedef enum {
  * queue.
  */
 struct queue_item {
-	uint8_t 	*fdu;		/* Pointer to the packet*/
-	uint8_t 	rt_flag;	/* Retransmit flag*/
-	uint8_t		seq_num;	/* Sequence number of the packet*/
-	tc_bypass_t type;		/* Type_A or Type_B*/
+	uint8_t     *fdu;       /* Pointer to the packet*/
+	uint8_t     rt_flag;    /* Retransmit flag*/
+	uint8_t     seq_num;    /* Sequence number of the packet*/
+	tc_bypass_t type;       /* Type_A or Type_B*/
 };
 
 struct farm_vars {
-	uint8_t		state;
-	uint8_t		lockout;
-	uint8_t		wait;
-	uint8_t		retransmit;
-	uint8_t		vr;
-	uint8_t		farmb_cnt;
-	uint8_t		w;
-	uint8_t		pw;
-	uint8_t		nw;
+	uint8_t     state;
+	uint8_t     lockout;
+	uint8_t     wait;
+	uint8_t     retransmit;
+	uint8_t     vr;
+	uint8_t     farmb_cnt;
+	uint8_t     w;
+	uint8_t     pw;
+	uint8_t     nw;
 };
 
 /**
@@ -86,7 +86,7 @@ struct farm_vars {
  * @param timeout_type the timeout type
  * @param tx_lim the frame retransmission limit
  */
-int
+void
 prepare_fop(struct fop_config *fop, uint16_t slide_wnd,
             fop_state_t state, uint16_t t1_init, uint8_t timeout_type,
             uint8_t tx_lim);
@@ -97,7 +97,7 @@ prepare_fop(struct fop_config *fop, uint16_t slide_wnd,
  * @param state the initial state of the machine
  * @param window_width the window width
  */
-int
+void
 prepare_farm(struct farm_config *farm, farm_state_t state,
              uint8_t window_width);
 
@@ -128,10 +128,10 @@ reset_lockout(struct farm_config *farm_cfg);
 void
 set_wait(struct farm_config *farm_cfg);
 
-int
+void
 reset_wait(struct tc_transfer_frame *tc_tf);
 
-int
+void
 buffer_release(struct tc_transfer_frame *tc_tf);
 
 void
@@ -250,7 +250,7 @@ bd_reject(struct tc_transfer_frame *tc_tf);
  */
 __attribute__((weak))
 uint16_t
-wait_queue_size(uint16_t);
+tc_wait_queue_size(uint16_t);
 
 /**
  * Enqueues an item on the wait queue
@@ -260,7 +260,7 @@ wait_queue_size(uint16_t);
  */
 __attribute__((weak))
 int
-wait_queue_enqueue(void *, uint16_t);
+tc_wait_queue_enqueue(void *, uint16_t);
 
 /**
  * Dequeues an item from the wait queue
@@ -270,7 +270,7 @@ wait_queue_enqueue(void *, uint16_t);
  */
 __attribute__((weak))
 int
-wait_queue_dequeue(void *, uint16_t);
+tc_wait_queue_dequeue(void *, uint16_t);
 
 /**
  * Returns if the wait queue is empty
@@ -278,7 +278,7 @@ wait_queue_dequeue(void *, uint16_t);
  */
 __attribute__((weak))
 bool
-wait_queue_empty(uint16_t);
+tc_wait_queue_empty(uint16_t);
 
 /**
  * Clears the wait queue
@@ -286,7 +286,7 @@ wait_queue_empty(uint16_t);
  */
 __attribute__((weak))
 int
-wait_queue_clear(uint16_t);
+tc_wait_queue_clear(uint16_t);
 
 
 /**
@@ -295,7 +295,7 @@ wait_queue_clear(uint16_t);
  */
 __attribute__((weak))
 uint16_t
-sent_queue_size(uint16_t);
+tc_sent_queue_size(uint16_t);
 
 /**
  * Enqueues an item on the sent queue
@@ -305,7 +305,7 @@ sent_queue_size(uint16_t);
  */
 __attribute__((weak))
 int
-sent_queue_enqueue(struct queue_item *, uint16_t);
+tc_sent_queue_enqueue(struct queue_item *, uint16_t);
 
 
 /**
@@ -316,7 +316,7 @@ sent_queue_enqueue(struct queue_item *, uint16_t);
  */
 __attribute__((weak))
 int
-sent_queue_dequeue(struct queue_item *, uint16_t);
+tc_sent_queue_dequeue(struct queue_item *, uint16_t);
 
 /**
  * Returns if the sent queue is empty
@@ -324,7 +324,7 @@ sent_queue_dequeue(struct queue_item *, uint16_t);
  */
 __attribute__((weak))
 bool
-sent_queue_empty(uint16_t);
+tc_sent_queue_empty(uint16_t);
 
 /**
  * Returns if the sent queue is full
@@ -332,7 +332,7 @@ sent_queue_empty(uint16_t);
  */
 __attribute__((weak))
 bool
-sent_queue_full(uint16_t);
+tc_sent_queue_full(uint16_t);
 
 /**
  * Clears the sent queue
@@ -341,7 +341,7 @@ sent_queue_full(uint16_t);
  */
 __attribute__((weak))
 int
-sent_queue_clear(uint16_t);
+tc_sent_queue_clear(uint16_t);
 
 /**
  * Returns a pointer to the head of the sent
@@ -352,7 +352,7 @@ sent_queue_clear(uint16_t);
  */
 __attribute__((weak))
 int
-sent_queue_head(struct queue_item *, uint16_t);
+tc_sent_queue_head(struct queue_item *, uint16_t);
 
 
 /**
@@ -361,7 +361,7 @@ sent_queue_head(struct queue_item *, uint16_t);
  */
 __attribute__((weak))
 bool
-rx_queue_full(uint8_t);
+tc_rx_queue_full(uint16_t);
 
 /**
  * Clears the RX queue
@@ -369,7 +369,7 @@ rx_queue_full(uint8_t);
  */
 __attribute__((weak))
 int
-rx_queue_clear(uint8_t);
+tc_rx_queue_clear(uint16_t);
 
 /**
  * Checks if tx queue is full
@@ -377,7 +377,7 @@ rx_queue_clear(uint8_t);
  */
 __attribute__((weak))
 bool
-tx_queue_full();
+tc_tx_queue_full();
 
 /**
  * Enqueues an item on the tx queue.
@@ -389,7 +389,7 @@ tx_queue_full();
  */
 __attribute__((weak))
 int
-tx_queue_enqueue(uint8_t *, uint16_t);
+tc_tx_queue_enqueue(uint8_t *, uint16_t);
 
 /**
  * Starts the timer

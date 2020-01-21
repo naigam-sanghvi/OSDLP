@@ -24,7 +24,7 @@
 #include "test.h"
 #include "queue_util.h"
 
-uint8_t buf[MAX_SDU_SIZE];
+uint8_t buf[TC_MAX_SDU_SIZE];
 pthread_mutex_t lock;
 pthread_mutex_t tlock;
 bool has_ended;
@@ -41,7 +41,6 @@ uint16_t active_vcid = 0;
 void *
 transmitter(void *vargp)
 {
-	int ret;
 	notification_t notif;
 
 	pthread_mutex_lock(&lock);
@@ -88,8 +87,8 @@ transmitter(void *vargp)
 				buf[1] = (size >> 8) & 0xff;
 				buf[2] = (size) & 0xff;
 				/* Prepare the frame */
-				ret = prepare_typea_data_frame(&tc_tx_unseg, buf, size);
-				assert_int_equal(0, ret);
+				prepare_typea_data_frame(&tc_tx_unseg, buf, size);
+
 				pthread_mutex_lock(&lock);
 				/* Transmit the frame */
 				notif = tc_transmit(&tc_tx_unseg, buf, size);
@@ -126,9 +125,9 @@ transmitter(void *vargp)
 			has_packets = true;
 			tx_sleep = (rand() % 3);
 			if (total_packets == 0) {
-				size = MAX_SDU_SIZE;
+				size = TC_MAX_SDU_SIZE;
 			}
-			size = (rand() % (MAX_SDU_SIZE - 10)) + 4;
+			size = (rand() % (TC_MAX_SDU_SIZE - 10)) + 4;
 			sleep(tx_sleep);
 		}
 		/* Ensure that we have received the ACCEPT signal from the COP
@@ -153,8 +152,8 @@ transmitter(void *vargp)
 				buf[size - 1] = (total_packets & 0xff);
 				buf[1] = (size >> 8) & 0xff;
 				buf[2] = (size) & 0xff;
-				ret = prepare_typea_data_frame(&tc_tx, buf, size);
-				assert_int_equal(0, ret);
+				prepare_typea_data_frame(&tc_tx, buf, size);
+
 				pthread_mutex_lock(&lock);
 				notif = tc_transmit(&tc_tx, buf, size);
 				total_packets++;
@@ -214,15 +213,15 @@ receiver(void *vargp)
 			ret = dequeue(&uplink_channel, test_util);
 			assert_int_equal(ret, 0);
 			/* Pass it to the receive function of the TC*/
-			tc_receive(test_util, MAX_FRAME_LEN);
+			tc_receive(test_util, TC_MAX_FRAME_LEN);
 			/*Respond with the clcw */
 			if (((test_util[2] >> 2) & 0x3f) == 1)
-				ret = prepare_clcw(&tc_rx, &clcw);
+				prepare_clcw(&tc_rx, &clcw);
 			else if (((test_util[2] >> 2) & 0x3f) == 0)
-				ret = prepare_clcw(&tc_rx_unseg, &clcw);
+				prepare_clcw(&tc_rx_unseg, &clcw);
 			assert_int_equal(ret, 0);
-			ret = clcw_pack(&clcw, test_util);
-			assert_int_equal(ret, 0);
+			clcw_pack(&clcw, test_util);
+
 			ret = enqueue(&downlink_channel, test_util);
 			assert_int_equal(ret, 0);
 			if (rx_queues[1].inqueue == rx_queues[1].capacity) {
@@ -235,7 +234,7 @@ receiver(void *vargp)
 					assert_int_equal(p[0], p[size - 1]);
 				}
 				packets_rxed += rx_queues[1].inqueue;
-				rx_queue_clear(1);
+				tc_rx_queue_clear(1);
 				/*This function must be called after an rx_queue_full event,
 				 * to notify COP that it can resume operations and reset the
 				 * wait flag */
@@ -272,7 +271,7 @@ clcw_listener(void *vargp)
 			int ret = get_first_ad_rt_frame(&it, 1);
 			ret = dequeue(&downlink_channel, clcw_buf);
 			assert_int_equal(ret, 0);
-			ret = clcw_unpack(&clcw, clcw_buf);
+			clcw_unpack(&clcw, clcw_buf);
 			if (clcw.vcid == 0) {
 				/* This is the function that must be called whenever
 				 * a new clcw is received */
@@ -396,7 +395,7 @@ test_operation(void **state)
 	uint16_t      sent_item_size = sizeof(struct local_queue_item);
 	uint16_t      sent_capacity = 10;
 	uint16_t      wait_item_size = sizeof(struct tc_transfer_frame);
-	uint16_t      rx_item_size = MAX_SDU_SIZE;
+	uint16_t      rx_item_size = TC_MAX_SDU_SIZE;
 	uint16_t      rx_capacity = 10;
 
 	uint16_t      scid = 101;
@@ -425,27 +424,27 @@ test_operation(void **state)
 	             rx_item_size,
 	             rx_capacity);                           /*Prepare queues*/
 
-	setup_configs(&tc_tx, &tc_rx,
-	              &cop_tx, &cop_rx,
-	              &fop, &farm,
-	              scid, max_frame_size,
-	              vcid, mapid, crc,
-	              seg_hdr, bypass,
-	              ctrl, fop_slide_wnd,
-	              fop_init_st, fop_t1_init,
-	              fop_timeout_type, fop_tx_limit,
-	              farm_init_st, farm_wnd_width);         /*Prepare config structs*/
+	setup_tm_configs(&tc_tx, &tc_rx,
+	                 &cop_tx, &cop_rx,
+	                 &fop, &farm,
+	                 scid, max_frame_size,
+	                 vcid, mapid, crc,
+	                 seg_hdr, bypass,
+	                 ctrl, fop_slide_wnd,
+	                 fop_init_st, fop_t1_init,
+	                 fop_timeout_type, fop_tx_limit,
+	                 farm_init_st, farm_wnd_width);         /*Prepare config structs*/
 
-	setup_configs(&tc_tx_unseg, &tc_rx_unseg,
-	              &cop_tx_unseg, &cop_rx_unseg,
-	              &fop_unseg, &farm_unseg,
-	              scid, max_frame_size,
-	              0, 2, crc,
-	              TC_SEG_HDR_NOTPRESENT, bypass,
-	              ctrl, fop_slide_wnd,
-	              fop_init_st, fop_t1_init,
-	              fop_timeout_type, fop_tx_limit,
-	              farm_init_st, farm_wnd_width);         /*Prepare config structs*/
+	setup_tm_configs(&tc_tx_unseg, &tc_rx_unseg,
+	                 &cop_tx_unseg, &cop_rx_unseg,
+	                 &fop_unseg, &farm_unseg,
+	                 scid, max_frame_size,
+	                 0, 2, crc,
+	                 TC_SEG_HDR_NOTPRESENT, bypass,
+	                 ctrl, fop_slide_wnd,
+	                 fop_init_st, fop_t1_init,
+	                 fop_timeout_type, fop_tx_limit,
+	                 farm_init_st, farm_wnd_width);         /*Prepare config structs*/
 	has_ended = false;
 	kill_timer = false;
 	timer_running = false;

@@ -76,14 +76,14 @@ tc_init(struct tc_transfer_frame *tc_tf,
 		m.fixed_overhead_len += 2;
 	}
 	m.max_data_size							= m.max_frame_size - m.fixed_overhead_len;
-	m.util.loop_state 						= LOOP_CLOSED;
+	m.util.loop_state 						= TC_LOOP_CLOSED;
 	tc_tf->mission							= m;
 	tc_tf->frame_data.seg_hdr.map_id 		= mapid & 0x3f;
 	tc_tf->cop_cfg 							= cop;
 	return 0;
 }
 
-int
+void
 tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in)
 {
 	struct tc_primary_hdr tc_p_hdr;
@@ -114,10 +114,9 @@ tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in)
 		tc_tf->crc = pkt_in[tc_p_hdr.frame_len - 1] << 8;
 		tc_tf->crc |= pkt_in[tc_p_hdr.frame_len];
 	}
-	return 0;
 }
 
-int
+void
 tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
         uint8_t *data_in, uint16_t length)
 {
@@ -154,7 +153,6 @@ tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 		pkt_out[packet_len] = crc & 0xff;
 		tc_tf->crc = crc;
 	}
-	return 0;
 }
 
 int
@@ -193,16 +191,13 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 
 	/* Frame Validation Checks */
 	uint8_t vcid = ((rx_buffer[2] >> 2) & 0x3f);
-	struct tc_transfer_frame *tc_tf = get_rx_config(vcid);
+	struct tc_transfer_frame *tc_tf = tc_get_rx_config(vcid);
 	if (tc_tf == NULL) {
 		return COP_ERROR;
 	}
 
 	int ret = 0;
-	ret = tc_unpack(tc_tf, rx_buffer);
-	if (ret) {
-		return COP_ERROR;
-	}
+	tc_unpack(tc_tf, rx_buffer);
 
 	ret = frame_validation_check(tc_tf, rx_buffer);
 	if (ret) {
@@ -223,15 +218,15 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					if (farm_ret == COP_ENQ) {
-						rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+						tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
 					} else {
-						rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+						tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 					}
 					return farm_ret;
 				case TC_FIRST_SEG:
-					if (tc_tf->mission.util.loop_state != LOOP_CLOSED) {
+					if (tc_tf->mission.util.loop_state != TC_LOOP_CLOSED) {
 						tc_tf->mission.util.buffered_length = 0;
-						tc_tf->mission.util.loop_state = LOOP_CLOSED;
+						tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 						return COP_DISCARD;
 					}
 					tc_tf->mission.util.buffered_length = tc_tf->frame_data.data_len;
@@ -241,40 +236,40 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 					memcpy(tc_tf->mission.util.buffer,
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
-					tc_tf->mission.util.loop_state = LOOP_OPEN;
+					tc_tf->mission.util.loop_state = TC_LOOP_OPEN;
 					return farm_ret;
 				case TC_LAST_SEG:
 					/* An intermediate packet was lost. Loop was never opened*/
-					if (tc_tf->mission.util.loop_state != LOOP_OPEN) {
+					if (tc_tf->mission.util.loop_state != TC_LOOP_OPEN) {
 						tc_tf->mission.util.buffered_length = 0;
 						return COP_DISCARD;
 					}
 					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
 					    tc_tf->mission.max_sdu_size) {
 						tc_tf->mission.util.buffered_length = 0;
-						tc_tf->mission.util.loop_state = LOOP_CLOSED;
+						tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 						return COP_DISCARD;
 					}
 					memcpy(&tc_tf->mission.util.buffer[tc_tf->mission.util.buffered_length],
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					if (farm_ret == COP_ENQ) {
-						rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+						tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
 					} else {
-						rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+						tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 					}
-					tc_tf->mission.util.loop_state = LOOP_CLOSED;
+					tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 					return farm_ret;
 				case TC_CONT_SEG:
 					/* An intermediate packet was lost. Loop was never opened*/
-					if (tc_tf->mission.util.loop_state != LOOP_OPEN) {
+					if (tc_tf->mission.util.loop_state != TC_LOOP_OPEN) {
 						tc_tf->mission.util.buffered_length = 0;
 						return COP_DISCARD;
 					}
 					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
 					    tc_tf->mission.max_sdu_size) {
 						tc_tf->mission.util.buffered_length = 0;
-						tc_tf->mission.util.loop_state = LOOP_CLOSED;
+						tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 						return COP_DISCARD;
 					}
 
@@ -287,21 +282,21 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 		} else {
 			if (tc_tf->frame_data.data_len > tc_tf->mission.max_sdu_size) {
 				tc_tf->mission.util.buffered_length = 0;
-				tc_tf->mission.util.loop_state = LOOP_CLOSED;
+				tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 				return COP_DISCARD;
 			}
 			memcpy(tc_tf->mission.util.buffer,
 			       tc_tf->frame_data.data,
 			       tc_tf->frame_data.data_len * sizeof(uint8_t));
 			if (farm_ret == COP_ENQ) {
-				rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+				tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
 			} else {
-				rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+				tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 			}
 		}
 	} else if (farm_ret == COP_ERROR) {
 		tc_tf->mission.util.buffered_length = 0;
-		tc_tf->mission.util.loop_state = LOOP_CLOSED;
+		tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 		return COP_ERROR;
 	}
 	return farm_ret;
@@ -342,7 +337,7 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 		tc_tf->frame_data.data_len = bytes_avail;
 		tc_tf->frame_data.data = buffer + (length - remaining);
 
-		if (!tx_queue_full(tc_tf->primary_hdr.vcid)) {
+		if (!tc_tx_queue_full(tc_tf->primary_hdr.vcid)) {
 			notif = req_transfer_fdu(tc_tf);
 		} else {
 			tc_tf->cop_cfg.fop.signal = REJECT_TX;
@@ -391,7 +386,7 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 	return ACCEPT_TX;
 }
 
-int
+void
 prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
                          uint16_t size)
 {
@@ -399,10 +394,9 @@ prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
 	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
 	tc_tf->frame_data.data = buffer;
 	tc_tf->frame_data.data_len = size;
-	return 0;
 }
 
-int
+void
 prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
                          uint16_t size)
 {
@@ -410,10 +404,9 @@ prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
 	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
 	tc_tf->frame_data.data = buffer;
 	tc_tf->frame_data.data_len = size;
-	return 0;
 }
 
-int
+void
 prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr)
 {
 	tc_tf->primary_hdr.bypass = TYPE_B;
@@ -422,10 +415,9 @@ prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr)
 	tc_tf->mission.set_vr_cmd[2] = vr;
 	tc_tf->frame_data.data = tc_tf->mission.set_vr_cmd;
 	tc_tf->frame_data.data_len = 3;
-	return 0;
 }
 
-int
+void
 prepare_typeb_unlock(struct tc_transfer_frame *tc_tf)
 {
 	tc_tf->primary_hdr.bypass = TYPE_B;
@@ -433,10 +425,9 @@ prepare_typeb_unlock(struct tc_transfer_frame *tc_tf)
 	tc_tf->frame_data.seg_hdr.seq_flag = TC_UNSEG;
 	tc_tf->frame_data.data = &tc_tf->mission.unlock_cmd;
 	tc_tf->frame_data.data_len = 1;
-	return 0;
 }
 
-int
+void
 prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw)
 {
 	clcw->cop_in_effect = 1;
@@ -447,5 +438,4 @@ prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw)
 	clcw->report_value = tc_tf->cop_cfg.farm.vr;
 	clcw->vcid = tc_tf->mission.vcid;
 	clcw->clcw_version_num = 0;
-	return 0;
 }
