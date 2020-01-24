@@ -20,7 +20,7 @@
 #include "cop.h"
 #include "osdlp.h"
 
-int
+void
 prepare_fop(struct fop_config *fop, uint16_t slide_wnd, fop_state_t state,
             uint16_t t1_init, uint8_t timeout_type, uint8_t tx_lim)
 {
@@ -34,10 +34,9 @@ prepare_fop(struct fop_config *fop, uint16_t slide_wnd, fop_state_t state,
 	fop->tx_lim = tx_lim;
 	fop->vs = 0;
 	fop->signal = IGNORE;
-	return 0;
 }
 
-int
+void
 prepare_farm(struct farm_config *farm, farm_state_t state,
              uint8_t window_width)
 {
@@ -45,22 +44,19 @@ prepare_farm(struct farm_config *farm, farm_state_t state,
 	farm->pw = window_width / 2;
 	farm->nw = window_width / 2;
 	farm->w = window_width;
-	return 0;
 }
 
-int
+void
 buffer_release(struct tc_transfer_frame *tc_tf)
 {
 	reset_wait(tc_tf);
-	return 0;
 }
 
-int
+void
 reset_wait(struct tc_transfer_frame *tc_tf)
 {
 	tc_tf->cop_cfg.farm.wait = 0;
 	tc_tf->cop_cfg.farm.state = FARM_STATE_OPEN;
-	return 0;
 }
 
 static farm_result_t
@@ -259,7 +255,7 @@ handle_farm_typea(struct tc_transfer_frame *tc_tf)
 	farm_result_t ret;
 	if (tc_tf->primary_hdr.frame_seq_num == tc_tf->cop_cfg.farm.vr) {
 		/*E1*/
-		if (!rx_queue_full(tc_tf->primary_hdr.vcid)) {
+		if (!tc_rx_queue_full(tc_tf->primary_hdr.vcid)) {
 			ret = farm_e1(tc_tf);
 			return ret;
 		}
@@ -400,12 +396,12 @@ notification_t
 look_for_fdu(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	if (!sent_queue_empty(tc_tf->primary_hdr.vcid)) {
+	if (!tc_sent_queue_empty(tc_tf->primary_hdr.vcid)) {
 		struct queue_item item;
 		ret = get_first_ad_rt_frame(&item, tc_tf->primary_hdr.vcid);
 		if (!ret) {
 			ret = reset_rt_frame(&item, tc_tf->primary_hdr.vcid);
-			ret = tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
+			ret = tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
 			if (ret) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -414,7 +410,7 @@ look_for_fdu(struct tc_transfer_frame *tc_tf)
 	}
 	/*Perform checks in case window wraps around*/
 
-	if (!wait_queue_empty(tc_tf->primary_hdr.vcid)) {
+	if (!tc_wait_queue_empty(tc_tf->primary_hdr.vcid)) {
 		if (tc_tf->cop_cfg.fop.nnr + tc_tf->cop_cfg.fop.slide_wnd >= 256) {
 			if (condition_fop_inwindow(tc_tf)) {
 				ret = transmit_type_ad(tc_tf);
@@ -456,11 +452,11 @@ look_for_directive(struct tc_transfer_frame *tc_tf)
 	notification_t notif;
 	int ret;
 	struct queue_item item;
-	ret = sent_queue_head(&item,
-	                      tc_tf->primary_hdr.vcid); //TODO Are we sure the first item is a BC type?
+	ret = tc_sent_queue_head(&item,
+	                         tc_tf->primary_hdr.vcid);
 	if (item.rt_flag == RT_FLAG_ON && item.type == TYPE_B) {
 		item.rt_flag = RT_FLAG_OFF;
-		ret = tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
+		ret = tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
 		if (ret) {
 			notif = bc_reject(tc_tf);
 			return notif;
@@ -477,15 +473,12 @@ transmit_type_ad(struct tc_transfer_frame *tc_tf)
 {
 	struct queue_item item;
 	struct tc_transfer_frame wait_item;
-	int ret = wait_queue_dequeue(&wait_item, tc_tf->primary_hdr.vcid);
+	int ret = tc_wait_queue_dequeue(&wait_item, tc_tf->primary_hdr.vcid);
 
-	ret = tc_pack(tc_tf, tc_tf->mission.util.buffer, wait_item.frame_data.data,
-	              wait_item.frame_data.data_len);
-	if (ret) {
-		return 1;
-	}
+	tc_pack(tc_tf, tc_tf->mission.util.buffer, wait_item.frame_data.data,
+	        wait_item.frame_data.data_len);
 
-	if (sent_queue_empty(tc_tf->primary_hdr.vcid)) {
+	if (tc_sent_queue_empty(tc_tf->primary_hdr.vcid)) {
 		tc_tf->cop_cfg.fop.tx_cnt = 1;
 	}
 	timer_start(tc_tf->primary_hdr.vcid);
@@ -494,14 +487,14 @@ transmit_type_ad(struct tc_transfer_frame *tc_tf)
 	item.fdu = tc_tf->mission.util.buffer;
 	item.rt_flag = RT_FLAG_OFF;
 	item.seq_num = tc_tf->cop_cfg.fop.vs;
-	ret = sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
+	ret = tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
 	tc_tf->cop_cfg.fop.vs = (tc_tf->cop_cfg.fop.vs + 1) % 256;
 
 	if (ret) {
 		return 1;
 	}
 
-	ret = tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
+	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
 	if (ret) {
 		return 1;
 	}
@@ -512,23 +505,21 @@ int
 transmit_type_bc(struct tc_transfer_frame *tc_tf)
 {
 	struct queue_item item;
-	int ret = tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
-	                  tc_tf->frame_data.data_len);
-	if (ret) {
-		return 1;
-	}
+	int ret;
+	tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
+	        tc_tf->frame_data.data_len);
 	tc_tf->cop_cfg.fop.tx_cnt = 1;
 	timer_start(tc_tf->primary_hdr.vcid);
 	item.type = TYPE_B;
 	item.fdu = tc_tf->mission.util.buffer;
 	item.rt_flag = RT_FLAG_OFF;
 	item.seq_num = tc_tf->cop_cfg.fop.vs;
-	ret = sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
+	ret = tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
 	if (ret) {
 		return 1;
 	}
 
-	ret = tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
+	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
 	if (ret) {
 		return 1;
 	}
@@ -538,13 +529,11 @@ transmit_type_bc(struct tc_transfer_frame *tc_tf)
 int
 transmit_type_bd(struct tc_transfer_frame *tc_tf)
 {
-	int ret = tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
-	                  tc_tf->frame_data.data_len);
-	if (ret) {
-		return 1;
-	}
+	int ret;
+	tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
+	        tc_tf->frame_data.data_len);
 	//Set BD_Out not ready
-	ret = tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
+	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
 	if (ret) {
 		return 1;
 	}
@@ -588,7 +577,7 @@ initiate_bc_retransmission(struct tc_transfer_frame *tc_tf)
 int
 purge_sent_queue(struct tc_transfer_frame *tc_tf)
 {
-	int ret = sent_queue_clear(tc_tf->primary_hdr.vcid);
+	int ret = tc_sent_queue_clear(tc_tf->primary_hdr.vcid);
 	if (ret) {
 		return 1;
 	}
@@ -598,7 +587,7 @@ purge_sent_queue(struct tc_transfer_frame *tc_tf)
 int
 purge_wait_queue(struct tc_transfer_frame *tc_tf)
 {
-	int ret = wait_queue_clear(tc_tf->primary_hdr.vcid);
+	int ret = tc_wait_queue_clear(tc_tf->primary_hdr.vcid);
 	if (ret) {
 		return 1;
 	}
@@ -612,12 +601,12 @@ remove_acked_frames(struct tc_transfer_frame *tc_tf, uint8_t nr)
 	int ret;
 	uint16_t counter = 0;
 	while (1) {
-		ret = sent_queue_head(&item, tc_tf->primary_hdr.vcid);
+		ret = tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
 		if (ret) {
 			break;
 		}
 		if (item.seq_num != nr) {
-			ret = sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
+			ret = tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
 			if (ret) {
 				return 1;
 			}
@@ -639,10 +628,10 @@ release_copy_of_bc(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	struct queue_item item;
-	ret = sent_queue_head(&item, tc_tf->primary_hdr.vcid);
+	ret = tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
 	/* Check that item in head is TYPE B*/
 	if ((item.type == TYPE_B)) {
-		ret = sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
+		ret = tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
 		if (ret) {
 			return 1;
 		}
@@ -1812,7 +1801,7 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
+			ret = tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
 			if (ret) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1825,7 +1814,7 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			ret = wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
+			ret = tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
 			if (ret) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1838,7 +1827,7 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_WAIT:
-			ret = wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
+			ret = tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
 			if (ret) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2119,7 +2108,7 @@ req_transfer_fdu(struct tc_transfer_frame *tc_tf)
 {
 	notification_t notif;
 	if (tc_tf->primary_hdr.bypass == TYPE_A) {
-		if (wait_queue_empty(tc_tf->primary_hdr.vcid)) {
+		if (tc_wait_queue_empty(tc_tf->primary_hdr.vcid)) {
 			/*E19*/
 			notif = fop_e19(tc_tf);
 			return notif;
@@ -2251,11 +2240,7 @@ initiate_with_unlock(struct tc_transfer_frame *tc_tf)
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			ret = prepare_typeb_unlock(tc_tf);
-			if (ret) {
-				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
-				return UNDEF_ERROR;
-			}
+			prepare_typeb_unlock(tc_tf);
 			ret = transmit_type_bc(tc_tf); // Unlock
 			if (ret) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
@@ -2300,11 +2285,7 @@ initiate_with_setvr(struct tc_transfer_frame *tc_tf,
 			}
 			tc_tf->cop_cfg.fop.vs = new_vr;
 			tc_tf->cop_cfg.fop.nnr = new_vr;
-			ret = prepare_typeb_setvr(tc_tf, new_vr);
-			if (ret) {
-				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
-				return UNDEF_ERROR;
-			}
+			prepare_typeb_setvr(tc_tf, new_vr);
 			ret = transmit_type_bc(tc_tf); // Set V(R)
 			if (ret) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;

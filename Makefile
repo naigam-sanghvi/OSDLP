@@ -32,7 +32,8 @@ QA_SRC     = $(QA_SRC_DIR)/queue_util.c \
              $(QA_SRC_DIR)/test_pack_unpack.c \
              $(QA_SRC_DIR)/test_typeb_frames.c \
              $(QA_SRC_DIR)/test_normal_op.c \
-             $(QA_SRC_DIR)/test_farm_window.c
+             $(QA_SRC_DIR)/test_farm_window.c \
+             $(QA_SRC_DIR)/test_tm.c
 
 INCLUDES   += -I$(INCL_DIR)
 QA_INC     = $(INCLUDES)
