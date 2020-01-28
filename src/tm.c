@@ -226,6 +226,10 @@ enable_packet_stuffing(struct tm_transfer_frame *tm_tf)
 	tm_tf->mission.stuff_state = TM_STUFFING_ON;
 }
 
+/**
+ * Returns the number of useful bytes that already are stored in
+ * a buffer
+ */
 static uint16_t
 eval_residue_len(struct tm_transfer_frame *tm_tf,
                  uint8_t *last_pkt, uint8_t vcid)
@@ -235,7 +239,8 @@ eval_residue_len(struct tm_transfer_frame *tm_tf,
 	uint16_t pkt_len = 0;
 	/*There is at least one packet in fifo*/
 	uint16_t first_hdr_ptr = ((last_pkt[4] & 0x07) << 8) | last_pkt[5];
-	if (first_hdr_ptr != TM_FIRST_HDR_PTR_NO_PKT_START) {
+	if (first_hdr_ptr != TM_FIRST_HDR_PTR_NO_PKT_START &&
+	    first_hdr_ptr != TM_FIRST_HDR_PTR_OID) {
 		/*The packet contains the start of a packet*/
 
 		if (last_pkt[tm_tf->mission.header_len +
@@ -264,6 +269,10 @@ eval_residue_len(struct tm_transfer_frame *tm_tf,
 				}
 			}
 		}
+	} else if (first_hdr_ptr == TM_FIRST_HDR_PTR_OID) {
+		return 0;
+	} else if (first_hdr_ptr == TM_FIRST_HDR_PTR_NO_PKT_START) {
+		return tm_tf->mission.max_data_len;
 	}
 	return residue_len;
 }
@@ -311,39 +320,54 @@ tm_transmit(struct tm_transfer_frame *tm_tf,
 	uint16_t bytes_avail = 0;
 	uint16_t num_packets = 0;
 	uint16_t remaining_len = 0;
-
 	uint8_t *last_pkt;
-
-
-	/*Check if last packet in fifo has leftover space*/
-	if (!tm_tx_queue_empty(vcid) && tm_tf->mission.stuff_state == TM_STUFFING_ON
-	    && tm_tf->mission.util.loop_state == TM_LOOP_CLOSED) {
-		last_pkt = tm_tx_queue_back(vcid);		// Get a pointer to the last packet in queue
-		residue_len = eval_residue_len(tm_tf, last_pkt, vcid);
-	}
-	/* The FDU has no free space */
-	if (residue_len >= tm_tf->mission.max_data_len) {
-		residue_len = 0;
-	}
 
 	if (tm_tf->mission.util.loop_state == TM_LOOP_OPEN) {
 		remaining_len = length - tm_tf->mission.util.buffered_length;
 	} else {
 		remaining_len = length;
 	}
-	num_packets = (remaining_len + residue_len) /
-	              tm_tf->mission.max_data_len;
-	if ((num_packets == 0)
-	    || ((remaining_len + residue_len) % tm_tf->mission.max_data_len != 0)) {
-		num_packets++;
+
+	/*Check if last packet in fifo has leftover space*/
+	if (!tm_tx_queue_empty(vcid) && tm_tf->mission.stuff_state == TM_STUFFING_ON
+	    && tm_tf->mission.util.loop_state == TM_LOOP_CLOSED) {
+		last_pkt = tm_tx_queue_back(vcid);		// Get a pointer to the last packet in queue
+		if (last_pkt == NULL) {
+			residue_len = tm_tf->mission.max_data_len;
+		} else {
+			residue_len = eval_residue_len(tm_tf, last_pkt, vcid);
+		}
+		/* The FDU has no free space */
+		if (residue_len >= tm_tf->mission.max_data_len) {
+			residue_len = 0;
+			num_packets = (remaining_len) /
+			              tm_tf->mission.max_data_len;
+			if ((num_packets == 0)
+			    || (remaining_len % tm_tf->mission.max_data_len != 0)) {
+				num_packets++;
+			}
+		} else {
+			num_packets = (remaining_len + residue_len) /
+			              tm_tf->mission.max_data_len;
+			if ((num_packets == 0)
+			    || ((remaining_len + residue_len) % tm_tf->mission.max_data_len != 0)) {
+				num_packets++;
+			}
+			handle_pkt_stuffing(tm_tf, num_packets, last_pkt,
+			                    data_in, length, &remaining_len, residue_len);
+			num_packets--;
+
+		}
+		tm_tx_commit_back(vcid);
+	} else {
+		num_packets = (remaining_len) /
+		              tm_tf->mission.max_data_len;
+		if ((num_packets == 0)
+		    || (remaining_len % tm_tf->mission.max_data_len != 0)) {
+			num_packets++;
+		}
 	}
 
-
-	if (residue_len > 0) {
-		handle_pkt_stuffing(tm_tf, num_packets, last_pkt,
-		                    data_in, length, &remaining_len, residue_len);
-		num_packets--;
-	}
 
 	/*Now fill the rest of the packets*/
 	while (num_packets > 0) {
