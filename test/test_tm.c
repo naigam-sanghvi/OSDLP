@@ -77,6 +77,12 @@ tm_get_packet_len(uint16_t *length, uint8_t *pkt, uint16_t mem_len)
 }
 
 void
+tm_tx_commit_back(uint8_t vcid)
+{
+	return;
+}
+
+void
 test_tm_no_stuffing(void **state)
 {
 	uint8_t rx_frame[TM_MAX_SDU_LEN];
@@ -463,4 +469,17 @@ test_tm_with_stuffing(void **state)
 
 	assert_int_equal(rx_queues[vcid].inqueue, 1);
 	dequeue(&rx_queues[vcid], rx_frame);
+
+	tm_transmit_idle_fdu(&tm_tx, vcid);
+	assert_int_equal(tx_queues[vcid].inqueue, 1);
+
+	length = 2 * tm_tx.mission.max_data_len;
+	for (int i = 0; i < length; i++)
+		data[i] = i % 256;
+
+	data[3] = (length >> 8) & 0xff;
+	data[4] = length & 0xff;
+
+	tm_transmit(&tm_tx, data, length);
+	assert_int_equal(tx_queues[vcid].inqueue, 2);
 }

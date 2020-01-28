@@ -257,12 +257,21 @@ bool
 tm_tx_queue_empty(uint8_t);
 
 /**
- * Checks if tx queue is empty
+ * Returns a pointer to the last element of the TX queue
  * @param the vcid
  */
 __attribute__((weak))
 uint8_t *
 tm_tx_queue_back(uint8_t);
+
+/**
+ * Notifies the caller that operations on the last element
+ * of the TX queue are over
+ * @param the vcid
+ */
+__attribute__((weak))
+void
+tm_tx_commit_back(uint8_t);
 
 /**
  * Puts an item at the back of the TX queue
