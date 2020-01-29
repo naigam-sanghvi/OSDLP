@@ -37,6 +37,7 @@ tm_init(struct tm_transfer_frame *tm_tf,
         tm_crc_flag_t crc_flag,
         uint16_t frame_size,
         uint16_t max_vcs,
+        uint16_t max_fifo_size,
         tm_stuff_state_t stuffing,
         uint8_t *util_buffer)
 {
@@ -64,6 +65,7 @@ tm_init(struct tm_transfer_frame *tm_tf,
 	m.util.loop_state           = TM_LOOP_CLOSED;
 	m.util.expected_pkt_len     = 0;
 	m.stuff_state               = stuffing;
+	m.tx_fifo_max_size          = max_fifo_size;
 
 
 	uint16_t occupied = TM_PRIMARY_HDR_LEN;

@@ -17,8 +17,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OSDLP_INC_COP_H_
-#define OSDLP_INC_COP_H_
+#ifndef INCLUDE_COP_H_
+#define INCLUDE_COP_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -462,4 +462,4 @@ __attribute__((weak))
 int
 get_first_ad_rt_frame(struct queue_item *, uint16_t);
 
-#endif /* OSDLP_INC_COP_H_ */
+#endif /* INCLUDE_COP_H_ */
