@@ -38,11 +38,16 @@ QA_SRC     = $(QA_SRC_DIR)/queue_util.c \
 INCLUDES   += -I$(INCL_DIR)
 QA_INC     = $(INCLUDES)
 QA_INC     += -I$(QA_SRC_DIR)
+QA_INC += -I$(CMOCKA_DIR)/include
 CFLAGS     += -Wall -g
 LDLIBS     += 
 QA_LDLIBS  += -lcmocka -lpthread
+QA_LDLIBS	+= -L$(CMOCKA_DIR)/build/src -Wl,-rpath=$(CMOCKA_DIR)/build/src 
 
-all: $(QA_EXE)
+CMOCKA_TAR = cmocka-cmocka-1.1.5.tar.gz
+CMOCKA_DIR = cmocka
+
+all: $(CMOCKA_DIR) $(QA_EXE)
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(INCL_DIR)/%.h
 	$(CC) $(INCLUDES) $(CFLAGS) $(LDLIBS) -c -o $@ $<
@@ -52,6 +57,12 @@ $(LIBNAME): $(OBJ) $(DEPS)
 
 $(QA_EXE): $(LIBNAME) $(QA_SRC) $(QA_EXE_SRC)
 	$(CC) $(QA_INC) $(LDFLAGS) $(CFLAGS) $^ $(QA_LDLIBS) ${LIBNAME} -o $@
+	
+$(CMOCKA_DIR):
+	mkdir -p $@
+	tar -xf $(CMOCKA_TAR) -C $@ --strip-components 1
+	mkdir -p $@/build
+	@(cd $@/build && cmake ../ && make -s)
 	
 .PHONY: test
 test: $(QA_EXE)
@@ -71,3 +82,4 @@ clean:
 	$(RM) *.gcno
 	$(RM) *.gcov
 	$(RM) *.html
+	$(RM) -r $(CMOCKA_DIR)
