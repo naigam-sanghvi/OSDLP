@@ -17,8 +17,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SPACE_PACKET_INC_CRC_H_
-#define SPACE_PACKET_INC_CRC_H_
+#ifndef INCLUDE_CRC_H_
+#define INCLUDE_CRC_H_
 
 #include <stdint.h>
 
@@ -26,4 +26,4 @@
 uint16_t
 calc_crc(uint8_t *data, uint32_t length);
 
-#endif /* SPACE_PACKET_INC_CRC_H_ */
+#endif /* INCLUDE_CRC_H_ */

@@ -36,16 +36,19 @@ test_tm(void **state)
 	tm_ocf_flag_t ocf 	= TM_OCF_NOTPRESENT;
 	uint16_t frame_len 	= 300;
 	uint8_t maxvcs 		= 2;
+	uint16_t maxfifo 	= 10;
 	int ret = tm_init(&tm_tx, scid,
 	                  &cnt, vcid, mcid, ocf,
 	                  0, 0, 0, NULL, 0, crc,
-	                  frame_len, maxvcs, TM_STUFFING_OFF, util_tx);
+	                  frame_len, maxvcs, maxfifo,
+	                  TM_STUFFING_OFF, util_tx);
 	assert_int_equal(0, ret);
 
 	ret = tm_init(&tm_rx, 0,
 	              &cnt, 0, 0, 0, 0, 0,
 	              0, NULL, 0, crc,
-	              frame_len, maxvcs, TM_STUFFING_OFF, util_tx);
+	              frame_len, maxvcs, maxfifo,
+	              TM_STUFFING_OFF, util_tx);
 	assert_int_equal(0, ret);
 
 

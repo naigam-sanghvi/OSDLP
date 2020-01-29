@@ -22,8 +22,8 @@
 
 #include "crc.h"
 
-#ifndef INC_TM_H_
-#define INC_TM_H_
+#ifndef INCLUDE_TM_H_
+#define INCLUDE_TM_H_
 
 /**
  * The maximum allowed frame size
@@ -193,6 +193,7 @@ tm_init(struct tm_transfer_frame *tm_tf,
         tm_crc_flag_t crc_flag,
         uint16_t frame_size,
         uint16_t max_vcs,
+        uint16_t max_fifo_size,
         tm_stuff_state_t stuffing,
         uint8_t *util_buffer);
 
@@ -306,4 +307,4 @@ __attribute__((weak))
 int
 tm_get_packet_len(uint16_t *, uint8_t *, uint16_t);
 
-#endif /* INC_TM_H_ */
+#endif /* INCLUDE_TM_H_ */
