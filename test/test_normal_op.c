@@ -413,6 +413,7 @@ test_operation(void **state)
 	uint8_t       fop_tx_limit = 10;
 	farm_state_t  farm_init_st = FARM_STATE_OPEN;
 	uint8_t       farm_wnd_width = 10;
+	uint16_t      rx_max_fifo_size = 10;
 
 	setup_queues(up_chann_item_size,
 	             up_chann_capacity,
@@ -424,10 +425,11 @@ test_operation(void **state)
 	             rx_item_size,
 	             rx_capacity);                           /*Prepare queues*/
 
-	setup_tm_configs(&tc_tx, &tc_rx,
+	setup_tc_configs(&tc_tx, &tc_rx,
 	                 &cop_tx, &cop_rx,
 	                 &fop, &farm,
 	                 scid, max_frame_size,
+	                 rx_max_fifo_size,
 	                 vcid, mapid, crc,
 	                 seg_hdr, bypass,
 	                 ctrl, fop_slide_wnd,
@@ -435,10 +437,11 @@ test_operation(void **state)
 	                 fop_timeout_type, fop_tx_limit,
 	                 farm_init_st, farm_wnd_width);         /*Prepare config structs*/
 
-	setup_tm_configs(&tc_tx_unseg, &tc_rx_unseg,
+	setup_tc_configs(&tc_tx_unseg, &tc_rx_unseg,
 	                 &cop_tx_unseg, &cop_rx_unseg,
 	                 &fop_unseg, &farm_unseg,
 	                 scid, max_frame_size,
+	                 rx_max_fifo_size,
 	                 0, 2, crc,
 	                 TC_SEG_HDR_NOTPRESENT, bypass,
 	                 ctrl, fop_slide_wnd,

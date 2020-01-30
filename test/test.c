@@ -359,11 +359,11 @@ setup_queues(uint16_t up_chann_item_size,
 }
 
 int
-setup_tm_configs(struct tc_transfer_frame *tc_tx,
+setup_tc_configs(struct tc_transfer_frame *tc_tx,
                  struct tc_transfer_frame *tc_rx,
                  struct cop_config *fop_conf, struct cop_config *farm_conf,
                  struct fop_config *fop, struct farm_config *farm,
-                 uint16_t scid, uint16_t max_frame_size,
+                 uint16_t scid, uint16_t max_frame_size, uint16_t max_fifo_size,
                  uint8_t vcid, uint8_t mapid, tc_crc_flag_t crc,
                  tc_seg_hdr_t seg_hdr, tc_bypass_t bypass, tc_ctrl_t ctrl,
                  uint8_t fop_slide_wnd, fop_state_t fop_init_st,
@@ -378,14 +378,14 @@ setup_tm_configs(struct tc_transfer_frame *tc_tx,
 	memcpy(&fop_conf->fop, fop, sizeof(struct fop_config));
 	//cop_tx.fop = fop;
 	ret = tc_init(tc_tx, scid, TC_MAX_SDU_SIZE,
-	              max_frame_size, vcid, mapid, crc,
+	              max_frame_size, max_fifo_size, vcid, mapid, crc,
 	              seg_hdr, bypass, ctrl, util_tx, *fop_conf);
 	assert_int_not_equal(ret, 1);
 	prepare_farm(farm, farm_init_st, farm_wnd_width);
 	memcpy(&farm_conf->farm, farm, sizeof(struct farm_config));
 	//farm_conf.farm = farm;
 	ret = tc_init(tc_rx, scid, TC_MAX_SDU_SIZE,
-	              max_frame_size, vcid, mapid, crc,
+	              max_frame_size, max_fifo_size, vcid, mapid, crc,
 	              seg_hdr, bypass, ctrl, util_rx, *farm_conf);
 	assert_int_not_equal(ret, 1);
 	return 0;

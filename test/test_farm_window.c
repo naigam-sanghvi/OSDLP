@@ -49,6 +49,7 @@ test_vr(void **state)
 	uint8_t       farm_wnd_width = 10;
 	notification_t notif;
 	farm_result_t  farm_ret;
+	uint16_t      rx_max_fifo_size = 10;
 
 	setup_queues(up_chann_item_size,
 	             up_chann_capacity,
@@ -62,10 +63,11 @@ test_vr(void **state)
 
 	struct clcw_frame clcw;
 	int ret;
-	setup_tm_configs(&tc_tx, &tc_rx,
+	setup_tc_configs(&tc_tx, &tc_rx,
 	                 &cop_tx, &cop_rx,
 	                 &fop, &farm,
 	                 scid, max_frame_size,
+	                 rx_max_fifo_size,
 	                 vcid, mapid, crc,
 	                 seg_hdr, bypass,
 	                 ctrl, fop_slide_wnd,

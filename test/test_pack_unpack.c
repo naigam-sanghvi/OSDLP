@@ -84,8 +84,10 @@ test_tc(void **state)
 	tc_seg_hdr_t seg 		= TC_SEG_HDR_PRESENT;
 	tc_bypass_t bypass 		= TYPE_A;
 	tc_ctrl_t ctrl_cmd 		= TC_DATA;
+	uint16_t rx_max_fifo_size = 10;
 	int ret = tc_init(&tc_tx,
 	                  scid, max_sdu_size, max_fdu_size,
+	                  rx_max_fifo_size,
 	                  vcid, mapid, crc,
 	                  seg, bypass, ctrl_cmd,
 	                  util, cop);
@@ -93,6 +95,7 @@ test_tc(void **state)
 
 	ret = tc_init(&tc_rx,
 	              0, max_sdu_size, max_fdu_size,
+	              rx_max_fifo_size,
 	              0, 0, crc,
 	              seg, 0, 0,
 	              util, cop);
