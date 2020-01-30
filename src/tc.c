@@ -33,6 +33,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
         uint16_t scid,
         uint16_t max_sdu_size,
         uint16_t max_frame_size,
+        uint16_t rx_fifo_size,
         uint8_t vcid,
         uint8_t mapid,
         tc_crc_flag_t crc_flag,
@@ -63,6 +64,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
 	m.max_frame_size						= max_frame_size;
 	m.max_sdu_size							= max_sdu_size;
 	m.max_data_size							= max_frame_size;
+	m.rx_fifo_max_size                      = rx_fifo_size;
 	m.util.buffer							= util_buffer;
 	m.fixed_overhead_len					= TC_TRANSFER_FRAME_PRIMARY_HEADER;
 	m.unlock_cmd							= 0;

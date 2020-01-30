@@ -93,11 +93,11 @@ setup_queues(uint16_t up_chann_item_size,
              uint16_t rx_capacity);
 
 int
-setup_tm_configs(struct tc_transfer_frame *tc_tx,
+setup_tc_configs(struct tc_transfer_frame *tc_tx,
                  struct tc_transfer_frame *tc_rx,
                  struct cop_config *fop_conf, struct cop_config *farm_conf,
                  struct fop_config *fop, struct farm_config *farm,
-                 uint16_t scid, uint16_t max_frame_size,
+                 uint16_t scid, uint16_t max_frame_size, uint16_t max_fifo_size,
                  uint8_t vcid, uint8_t mapid, tc_crc_flag_t crc,
                  tc_seg_hdr_t seg_hdr, tc_bypass_t bypass, tc_ctrl_t ctrl,
                  uint8_t fop_slide_wnd, fop_state_t fop_init_st,

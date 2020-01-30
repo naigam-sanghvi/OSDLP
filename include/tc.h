@@ -126,6 +126,7 @@ struct tc_mission_params {
 	uint16_t
 	max_data_size;      /* Maximum size of data portion of packet*/
 	uint16_t            max_frame_size;     /* Maximum size of frame*/
+	uint16_t            rx_fifo_max_size;
 	uint16_t            fixed_overhead_len;
 	uint16_t            spacecraft_id;      /* Spacecraft ID*/
 	uint8_t             vcid;               /* Cirtual Channel ID*/
@@ -214,6 +215,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
         uint16_t scid,
         uint16_t max_fdu_size,
         uint16_t max_frame_size,
+        uint16_t rx_fifo_size,
         uint8_t vcid,
         uint8_t mapid,
         tc_crc_flag_t crc_flag,
