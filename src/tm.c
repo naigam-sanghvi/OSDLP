@@ -251,7 +251,7 @@ eval_residue_len(struct tm_transfer_frame *tm_tf,
 			return residue_len;
 		} else {
 			residue_len += first_hdr_ptr;
-			while (1) {
+			while (residue_len <= tm_tf->mission.max_data_len) {
 				ret = tm_get_packet_len(&pkt_len,
 				                        &last_pkt[tm_tf->mission.header_len + residue_len],
 				                        tm_tf->mission.max_data_len);
