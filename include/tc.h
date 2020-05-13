@@ -297,16 +297,6 @@ int
 tc_rx_queue_enqueue(uint8_t *, uint16_t);
 
 /**
- * Dequeues an item from the rx queue
- * @param the buffer to place the item
- * @param the vcid
- * Returns 0 on success, 1 otherwise
- */
-__attribute__((weak))
-int
-tc_rx_queue_dequeue(uint8_t *, uint16_t);
-
-/**
  * Enqueues an item on the rx queue even
  * if there is no space,
  * by deleting the tail item
