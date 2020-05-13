@@ -177,13 +177,6 @@ tc_rx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
 }
 
 int
-tc_rx_queue_dequeue(uint8_t *buffer, uint16_t vcid)
-{
-	int ret = dequeue(&rx_queues[vcid], buffer);
-	return ret;
-}
-
-int
 tc_rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
 {
 	int ret = enqueue(&rx_queues[vcid], buffer);
