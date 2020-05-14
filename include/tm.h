@@ -76,7 +76,7 @@ typedef enum {
 	TM_RX_ERROR         = 2,
 	TM_RX_OID           = 3,
 	TM_RX_DENIED        = 4
-} tm_rx_status_t;
+} tm_rx_result_t;
 
 struct tm_master_channel_id {
 	uint8_t		version_num     : 2;
@@ -221,7 +221,7 @@ int
 tm_transmit(struct tm_transfer_frame *tm_tf,
             uint8_t *data_in, uint16_t length);
 
-tm_rx_status_t
+int
 tm_receive(struct tm_transfer_frame *tm_tf,
            uint8_t *data_in);
 
@@ -259,11 +259,13 @@ tm_tx_queue_empty(uint8_t);
 
 /**
  * Returns a pointer to the last element of the TX queue
+ * @param reference to the pointer where packet will be stored
  * @param the vcid
+ * @return error code. Negative for error, zero or positive for success
  */
 __attribute__((weak))
-uint8_t *
-tm_tx_queue_back(uint8_t);
+int
+tm_tx_queue_back(uint8_t **, uint8_t);
 
 /**
  * Notifies the caller that operations on the last element
@@ -301,7 +303,7 @@ tm_rx_queue_enqueue(uint8_t *, uint8_t);
  * to by the pointer where the user is allowed to
  * search for the packet length field
  *
- * Returns 0 for success, 1 otherwise
+ * @return error code. Negative for error, zero or positive for success
  */
 __attribute__((weak))
 int

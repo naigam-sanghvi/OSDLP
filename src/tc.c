@@ -44,7 +44,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
         struct cop_config cop)
 {
 	if (max_frame_size <= TC_TRANSFER_FRAME_PRIMARY_HEADER) {
-		return 1;
+		return -1;
 	}
 	struct tc_mission_params m;
 	tc_tf->primary_hdr.version_num 			= TC_VERSION_NUMBER;
@@ -163,10 +163,10 @@ frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer)
 	uint8_t check[1000];
 	memcpy(check, rx_buffer, tc_tf->primary_hdr.frame_len + 1);
 	if (tc_tf->mission.version_num != tc_tf->primary_hdr.version_num) {
-		return 1;
+		return -1;
 	}
 	if (tc_tf->mission.spacecraft_id != tc_tf->primary_hdr.spacecraft_id) {
-		return 1;
+		return -1;
 	}
 	if (tc_tf->mission.crc_flag) {
 		uint16_t crc = calc_crc(rx_buffer, tc_tf->primary_hdr.frame_len - 1);
@@ -174,36 +174,37 @@ frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer)
 		rx_crc = (rx_buffer[tc_tf->primary_hdr.frame_len - 1] & 0xff) << 8;
 		rx_crc |= (rx_buffer[tc_tf->primary_hdr.frame_len] & 0xff);
 		if (crc != rx_crc) {
-			return 1;
+			return -1;
 		}
 	}
 	return 0;
 }
 
-farm_result_t
+int
 tc_receive(uint8_t *rx_buffer, uint32_t length)
 {
+	int ret;
 	farm_result_t farm_ret;
 	/* Delimiting */
 	uint16_t frame_len = (rx_buffer[2] & 0x03) << 8;
 	frame_len |= (rx_buffer[3] & 0xff);
 	if ((frame_len + 1) > length) {
-		return COP_ERROR;
+		return -TC_RX_FRAME_LEN_ERR;
 	}
 
 	/* Frame Validation Checks */
 	uint8_t vcid = ((rx_buffer[2] >> 2) & 0x3f);
-	struct tc_transfer_frame *tc_tf = tc_get_rx_config(vcid);
-	if (tc_tf == NULL) {
-		return COP_ERROR;
+	struct tc_transfer_frame *tc_tf;
+	ret = tc_get_rx_config(&tc_tf, vcid);
+	if (ret < 0) {
+		return -TC_RX_CONFIG_ERR;
 	}
 
-	int ret = 0;
 	tc_unpack(tc_tf, rx_buffer);
 
 	ret = frame_validation_check(tc_tf, rx_buffer);
 	if (ret) {
-		return COP_ERROR;
+		return -TC_RX_FRAME_VAL_ERR;
 	}
 
 	/* Perform FARM-1 */
@@ -214,97 +215,114 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 			switch (tc_tf->frame_data.seg_hdr.seq_flag) {
 				case TC_UNSEG:
 					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_size) {
-						return COP_ERROR;
+						return -TC_RX_COP_ERR;
 					}
 					memcpy(tc_tf->mission.util.buffer,
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					if (farm_ret == COP_ENQ) {
-						tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+						ret = tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
 					} else {
-						tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+						ret = tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 					}
-					return farm_ret;
+					if (ret < 0) {
+						return -TC_RX_QUEUE_ERR;
+					} else {
+						return TC_RX_OK;
+					}
 				case TC_FIRST_SEG:
 					if (tc_tf->mission.util.loop_state != TC_LOOP_CLOSED) {
 						tc_tf->mission.util.buffered_length = 0;
 						tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
-						return COP_DISCARD;
+						return -TC_RX_COP_ERR;
 					}
 					tc_tf->mission.util.buffered_length = tc_tf->frame_data.data_len;
 					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_size) {
-						return COP_ERROR;
+						return -TC_RX_COP_ERR;
 					}
 					memcpy(tc_tf->mission.util.buffer,
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					tc_tf->mission.util.loop_state = TC_LOOP_OPEN;
-					return farm_ret;
+					return TC_RX_OK;
 				case TC_LAST_SEG:
 					/* An intermediate packet was lost. Loop was never opened*/
 					if (tc_tf->mission.util.loop_state != TC_LOOP_OPEN) {
 						tc_tf->mission.util.buffered_length = 0;
-						return COP_DISCARD;
+						return -TC_RX_COP_ERR;
 					}
 					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
 					    tc_tf->mission.max_sdu_size) {
 						tc_tf->mission.util.buffered_length = 0;
 						tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
-						return COP_DISCARD;
+						return -TC_RX_COP_ERR;
 					}
 					memcpy(&tc_tf->mission.util.buffer[tc_tf->mission.util.buffered_length],
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					if (farm_ret == COP_ENQ) {
-						tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+						ret = tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
 					} else {
-						tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+						ret = tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 					}
 					tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
-					return farm_ret;
+					if (ret < 0) {
+						return -TC_RX_QUEUE_ERR;
+					} else {
+						return TC_RX_OK;
+					}
 				case TC_CONT_SEG:
 					/* An intermediate packet was lost. Loop was never opened*/
 					if (tc_tf->mission.util.loop_state != TC_LOOP_OPEN) {
 						tc_tf->mission.util.buffered_length = 0;
-						return COP_DISCARD;
+						return -TC_RX_COP_ERR;
 					}
 					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
 					    tc_tf->mission.max_sdu_size) {
 						tc_tf->mission.util.buffered_length = 0;
 						tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
-						return COP_DISCARD;
+						return -TC_RX_COP_ERR;
 					}
 
 					memcpy(&tc_tf->mission.util.buffer[tc_tf->mission.util.buffered_length],
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					tc_tf->mission.util.buffered_length += tc_tf->frame_data.data_len;
-					return farm_ret;
+					return TC_RX_OK;
 			}
 		} else {
 			if (tc_tf->frame_data.data_len > tc_tf->mission.max_sdu_size) {
 				tc_tf->mission.util.buffered_length = 0;
 				tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
-				return COP_DISCARD;
+				return -TC_RX_COP_ERR;
 			}
 			memcpy(tc_tf->mission.util.buffer,
 			       tc_tf->frame_data.data,
 			       tc_tf->frame_data.data_len * sizeof(uint8_t));
 			if (farm_ret == COP_ENQ) {
-				tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+				ret = tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
 			} else {
-				tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+				ret = tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+			}
+			if (ret < 0) {
+				return -TC_RX_QUEUE_ERR;
+			} else {
+				return TC_RX_OK;
 			}
 		}
 	} else if (farm_ret == COP_ERROR) {
 		tc_tf->mission.util.buffered_length = 0;
 		tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
-		return COP_ERROR;
+		return -TC_RX_COP_ERR;
 	}
-	return farm_ret;
+	if (farm_ret == COP_OK) {
+		return TC_RX_OK;
+	} else {
+		return -TC_RX_COP_ERR;
+	}
 }
 
-notification_t
+int
 tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 {
 	uint16_t remaining = length;
@@ -343,7 +361,7 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 			notif = req_transfer_fdu(tc_tf);
 		} else {
 			tc_tf->cop_cfg.fop.signal = REJECT_TX;
-			return REJECT_TX;
+			return -TC_TX_COP_ERR;
 		}
 		remaining -= bytes_avail;
 		/* Handle response */
@@ -352,7 +370,7 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 				tc_tf->seg_status.flag = SEG_ENDED;
 				tc_tf->seg_status.octets_txed = 0;
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
-				return REJECT_TX;
+				return -TC_TX_COP_ERR;
 			case DELAY_RESP:
 				if (remaining > 0) {
 					tc_tf->seg_status.flag = SEG_IN_PROGRESS;
@@ -361,7 +379,7 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 					tc_tf->seg_status.flag = SEG_ENDED;
 					tc_tf->seg_status.octets_txed = 0;
 				}
-				return DELAY_RESP;
+				return -TC_TX_DELAY;
 			case ACCEPT_TX:
 			case IGNORE:
 				if (remaining == 0) {
@@ -376,16 +394,16 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 				tc_tf->seg_status.flag = SEG_ENDED;
 				tc_tf->seg_status.octets_txed = 0;
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
-				return UNDEF_ERROR;
+				return -TC_TX_COP_ERR;
 			default:
 				tc_tf->seg_status.flag = SEG_ENDED;
 				tc_tf->seg_status.octets_txed = 0;
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
-				return UNDEF_ERROR;
+				return -TC_TX_COP_ERR;
 		}
 	}
 	tc_tf->cop_cfg.fop.signal = ACCEPT_TX;
-	return ACCEPT_TX;
+	return TC_TX_OK;
 }
 
 void

@@ -27,12 +27,16 @@ tm_tx_queue_empty(uint8_t vcid)
 	return (tx_queues[vcid].inqueue == 0);
 }
 
-uint8_t *
-tm_tx_queue_back(uint8_t vcid)
+int
+tm_tx_queue_back(uint8_t **pkt, uint8_t vcid)
 {
-	return back(&tx_queues[vcid]);
+	*pkt = back(&tx_queues[vcid]);
+	if (*pkt == NULL) {
+		return -1;
+	} else {
+		return 0;
+	}
 }
-
 
 int
 tm_tx_queue_enqueue(uint8_t *pkt, uint8_t vcid)
@@ -58,7 +62,7 @@ tm_rx_queue_enqueue(uint8_t *pkt, uint8_t vcid)
  * to by the pointer where the user is allowed to
  * search for the packet length field
  *
- * Returns 0 for success, 1 otherwise
+ * @return error code. Negative for error, zero or positive for success
  */
 
 int
@@ -69,10 +73,10 @@ tm_get_packet_len(uint16_t *length, uint8_t *pkt, uint16_t mem_len)
 			*length = ((pkt[3] << 8) | pkt[4]);
 			return 0;
 		} else {
-			return 1;
+			return -1;
 		}
 	} else {
-		return 1;
+		return -1;
 	}
 }
 
@@ -245,7 +249,7 @@ test_tm_no_stuffing(void **state)
 void
 test_tm_with_stuffing(void **state)
 {
-	tm_rx_status_t rx_status;
+	tm_rx_result_t rx_status;
 	uint8_t rx_frame[TM_MAX_SDU_LEN];
 	struct tm_transfer_frame tm_tx;
 	struct tm_transfer_frame tm_rx;
