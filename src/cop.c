@@ -340,12 +340,12 @@ initialize_cop(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	ret = purge_wait_queue(tc_tf);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	ret = purge_sent_queue(tc_tf);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	tc_tf->cop_cfg.fop.tx_cnt = 1;
 	tc_tf->cop_cfg.fop.ss = 0;
@@ -357,16 +357,16 @@ alert(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	ret = timer_cancel(tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	ret = purge_wait_queue(tc_tf);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	ret = purge_sent_queue(tc_tf);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	// Return negative confirm directive
 	tc_tf->cop_cfg.fop.signal = NEGATIVE_TX;
@@ -377,8 +377,8 @@ int
 resume(struct tc_transfer_frame *tc_tf)
 {
 	int ret = timer_start(tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	tc_tf->cop_cfg.fop.ss = 0;
 	return 0;
@@ -399,10 +399,13 @@ look_for_fdu(struct tc_transfer_frame *tc_tf)
 	if (!tc_sent_queue_empty(tc_tf->primary_hdr.vcid)) {
 		struct queue_item item;
 		ret = get_first_ad_rt_frame(&item, tc_tf->primary_hdr.vcid);
-		if (!ret) {
+		if (ret >= 0) {
 			ret = reset_rt_frame(&item, tc_tf->primary_hdr.vcid);
+			if (ret < 0) {
+				return UNDEF_ERROR;
+			}
 			ret = tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -414,7 +417,7 @@ look_for_fdu(struct tc_transfer_frame *tc_tf)
 		if (tc_tf->cop_cfg.fop.nnr + tc_tf->cop_cfg.fop.slide_wnd >= 256) {
 			if (condition_fop_inwindow(tc_tf)) {
 				ret = transmit_type_ad(tc_tf);
-				if (ret) {
+				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
 				}
@@ -428,7 +431,7 @@ look_for_fdu(struct tc_transfer_frame *tc_tf)
 			if (tc_tf->cop_cfg.fop.vs
 			    < tc_tf->cop_cfg.fop.nnr + tc_tf->cop_cfg.fop.slide_wnd) {
 				ret = transmit_type_ad(tc_tf);
-				if (ret) {
+				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
 				}
@@ -454,10 +457,14 @@ look_for_directive(struct tc_transfer_frame *tc_tf)
 	struct queue_item item;
 	ret = tc_sent_queue_head(&item,
 	                         tc_tf->primary_hdr.vcid);
+	if (ret < 0) {
+		tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
+		return UNDEF_ERROR;
+	}
 	if (item.rt_flag == RT_FLAG_ON && item.type == TYPE_B) {
 		item.rt_flag = RT_FLAG_OFF;
 		ret = tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
-		if (ret) {
+		if (ret < 0) {
 			notif = bc_reject(tc_tf);
 			return notif;
 		} else {
@@ -490,13 +497,13 @@ transmit_type_ad(struct tc_transfer_frame *tc_tf)
 	ret = tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
 	tc_tf->cop_cfg.fop.vs = (tc_tf->cop_cfg.fop.vs + 1) % 256;
 
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 
 	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	return 0;
 }
@@ -515,13 +522,13 @@ transmit_type_bc(struct tc_transfer_frame *tc_tf)
 	item.rt_flag = RT_FLAG_OFF;
 	item.seq_num = tc_tf->cop_cfg.fop.vs;
 	ret = tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 
 	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	return 0;
 }
@@ -534,8 +541,8 @@ transmit_type_bd(struct tc_transfer_frame *tc_tf)
 	        tc_tf->frame_data.data_len);
 	//Set BD_Out not ready
 	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	return 0;
 }
@@ -547,12 +554,12 @@ initiate_ad_retransmission(struct tc_transfer_frame *tc_tf)
 	cancel_lower_ops();
 	tc_tf->cop_cfg.fop.tx_cnt = (tc_tf->cop_cfg.fop.tx_cnt + 1) % 256;
 	ret = timer_start(tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	ret = mark_ad_as_rt(tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	return 0;
 }
@@ -564,12 +571,12 @@ initiate_bc_retransmission(struct tc_transfer_frame *tc_tf)
 	cancel_lower_ops();
 	tc_tf->cop_cfg.fop.tx_cnt = (tc_tf->cop_cfg.fop.tx_cnt + 1) % 256;
 	ret = timer_start(tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	ret = mark_bc_as_rt(tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	return 0;
 }
@@ -578,8 +585,8 @@ int
 purge_sent_queue(struct tc_transfer_frame *tc_tf)
 {
 	int ret = tc_sent_queue_clear(tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	return 0;
 }
@@ -588,8 +595,8 @@ int
 purge_wait_queue(struct tc_transfer_frame *tc_tf)
 {
 	int ret = tc_wait_queue_clear(tc_tf->primary_hdr.vcid);
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return -1;
 	}
 	return 0;
 }
@@ -602,13 +609,13 @@ remove_acked_frames(struct tc_transfer_frame *tc_tf, uint8_t nr)
 	uint16_t counter = 0;
 	while (1) {
 		ret = tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
-		if (ret) {
+		if (ret < 0) {
 			break;
 		}
 		if (item.seq_num != nr) {
 			ret = tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
-			if (ret) {
-				return 1;
+			if (ret < 0) {
+				return -1;
 			}
 			tc_tf->cop_cfg.fop.nnr = nr;
 			tc_tf->cop_cfg.fop.tx_cnt = 1;
@@ -629,11 +636,14 @@ release_copy_of_bc(struct tc_transfer_frame *tc_tf)
 	int ret;
 	struct queue_item item;
 	ret = tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
+	if (ret < 0) {
+		return -1;
+	}
 	/* Check that item in head is TYPE B*/
 	if ((item.type == TYPE_B)) {
 		ret = tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
-		if (ret) {
-			return 1;
+		if (ret < 0) {
+			return -1;
 		}
 	}
 	return 0;
@@ -650,7 +660,7 @@ fop_e1(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -660,7 +670,7 @@ fop_e1(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_WAIT:
 			// Alert;
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -674,7 +684,7 @@ fop_e1(struct tc_transfer_frame *tc_tf)
 			return POSITIVE_DIR;
 		case FOP_STATE_INIT_BC:
 			ret = release_copy_of_bc(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -701,7 +711,7 @@ fop_e2(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -716,7 +726,7 @@ fop_e2(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -731,7 +741,7 @@ fop_e2(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -767,7 +777,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -777,7 +787,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -787,7 +797,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -797,7 +807,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -807,7 +817,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_INIT_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -832,7 +842,7 @@ fop_e4(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -842,7 +852,7 @@ fop_e4(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -852,7 +862,7 @@ fop_e4(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -862,7 +872,7 @@ fop_e4(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -894,7 +904,7 @@ fop_e5(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -904,7 +914,7 @@ fop_e5(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -936,7 +946,7 @@ fop_e6(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -950,7 +960,7 @@ fop_e6(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -965,7 +975,7 @@ fop_e6(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1001,7 +1011,7 @@ fop_e7(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1011,7 +1021,7 @@ fop_e7(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1021,7 +1031,7 @@ fop_e7(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1052,13 +1062,13 @@ fop_e101(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1068,13 +1078,13 @@ fop_e101(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1085,7 +1095,7 @@ fop_e101(struct tc_transfer_frame *tc_tf,
 			remove_acked_frames(tc_tf, clcw->report_value);
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1116,7 +1126,7 @@ fop_e102(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1126,7 +1136,7 @@ fop_e102(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1136,7 +1146,7 @@ fop_e102(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1168,12 +1178,12 @@ fop_e8(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			ret = initiate_ad_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1188,12 +1198,12 @@ fop_e8(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			ret = initiate_ad_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1207,12 +1217,12 @@ fop_e8(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			ret = initiate_ad_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1248,7 +1258,7 @@ fop_e9(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1257,7 +1267,7 @@ fop_e9(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1266,7 +1276,7 @@ fop_e9(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			ret = remove_acked_frames(tc_tf,
 			                          clcw->report_value);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1296,7 +1306,7 @@ fop_e10(struct tc_transfer_frame *tc_tf,
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			ret = initiate_ad_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1314,7 +1324,7 @@ fop_e10(struct tc_transfer_frame *tc_tf,
 			return IGNORE;
 		case FOP_STATE_RT_WAIT:
 			ret = initiate_ad_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1450,7 +1460,7 @@ fop_e13(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1460,7 +1470,7 @@ fop_e13(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1470,7 +1480,7 @@ fop_e13(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1480,7 +1490,7 @@ fop_e13(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1508,7 +1518,7 @@ fop_e14(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1518,7 +1528,7 @@ fop_e14(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1528,7 +1538,7 @@ fop_e14(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1538,7 +1548,7 @@ fop_e14(struct tc_transfer_frame *tc_tf,
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1565,7 +1575,7 @@ fop_e16(struct tc_transfer_frame *tc_tf)
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			ret = initiate_ad_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1578,7 +1588,7 @@ fop_e16(struct tc_transfer_frame *tc_tf)
 			}
 		case FOP_STATE_RT_NO_WAIT:
 			ret = initiate_ad_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1595,7 +1605,7 @@ fop_e16(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1604,7 +1614,7 @@ fop_e16(struct tc_transfer_frame *tc_tf)
 			return ALERT_T1;
 		case FOP_STATE_INIT_BC:
 			ret = initiate_bc_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1632,7 +1642,7 @@ fop_e104(struct tc_transfer_frame *tc_tf)
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			ret = initiate_ad_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1645,7 +1655,7 @@ fop_e104(struct tc_transfer_frame *tc_tf)
 			}
 		case FOP_STATE_RT_NO_WAIT:
 			ret = initiate_ad_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1666,7 +1676,7 @@ fop_e104(struct tc_transfer_frame *tc_tf)
 			return SUSPEND;
 		case FOP_STATE_INIT_BC:
 			ret = initiate_bc_retransmission(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1694,7 +1704,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1704,7 +1714,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1714,7 +1724,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1724,7 +1734,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1734,7 +1744,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1778,7 +1788,7 @@ fop_e18(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1802,7 +1812,7 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			ret = tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1815,7 +1825,7 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 			}
 		case FOP_STATE_RT_NO_WAIT:
 			ret = tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1828,7 +1838,7 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 			}
 		case FOP_STATE_RT_WAIT:
 			ret = tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -1893,7 +1903,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			ret = transmit_type_bd(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
 			} else {
@@ -1902,7 +1912,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 			}
 		case FOP_STATE_RT_NO_WAIT:
 			ret = transmit_type_bd(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
 			} else {
@@ -1911,7 +1921,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 			}
 		case FOP_STATE_RT_WAIT:
 			ret = transmit_type_bd(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
 			} else {
@@ -1920,7 +1930,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 			}
 		case FOP_STATE_INIT_NO_BC:
 			ret = transmit_type_bd(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
 			} else {
@@ -1929,7 +1939,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 			}
 		case FOP_STATE_INIT_BC:
 			ret = transmit_type_bd(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
 			} else {
@@ -1938,7 +1948,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 			}
 		case FOP_STATE_INIT:
 			ret = transmit_type_bd(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
 			} else {
@@ -2157,7 +2167,7 @@ initiate_no_clcw(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT:
 			// accept();
 			ret = initialize_cop(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2199,7 +2209,7 @@ initiate_with_clcw(struct tc_transfer_frame *tc_tf)
 			return REJECT_DIR;
 		case FOP_STATE_INIT:
 			ret = initialize_cop(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2236,13 +2246,13 @@ initiate_with_unlock(struct tc_transfer_frame *tc_tf)
 			return REJECT_DIR;
 		case FOP_STATE_INIT:
 			ret = initialize_cop(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			prepare_typeb_unlock(tc_tf);
 			ret = transmit_type_bc(tc_tf); // Unlock
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2279,7 +2289,7 @@ initiate_with_setvr(struct tc_transfer_frame *tc_tf,
 			return REJECT_DIR;
 		case FOP_STATE_INIT:
 			ret = initialize_cop(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2287,7 +2297,7 @@ initiate_with_setvr(struct tc_transfer_frame *tc_tf,
 			tc_tf->cop_cfg.fop.nnr = new_vr;
 			prepare_typeb_setvr(tc_tf, new_vr);
 			ret = transmit_type_bc(tc_tf); // Set V(R)
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2309,7 +2319,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2320,7 +2330,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2331,7 +2341,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2342,7 +2352,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2353,7 +2363,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2419,7 +2429,7 @@ resume_ad(struct tc_transfer_frame *tc_tf)
 				return NA;
 			case FOP_STATE_INIT:
 				ret = resume(tc_tf);
-				if (ret) {
+				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
 				}
@@ -2451,7 +2461,7 @@ resume_ad(struct tc_transfer_frame *tc_tf)
 				return NA;
 			case FOP_STATE_INIT:
 				ret = resume(tc_tf);
-				if (ret) {
+				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
 				}
@@ -2483,7 +2493,7 @@ resume_ad(struct tc_transfer_frame *tc_tf)
 				return NA;
 			case FOP_STATE_INIT:
 				ret = resume(tc_tf);
-				if (ret) {
+				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
 				}
@@ -2515,7 +2525,7 @@ resume_ad(struct tc_transfer_frame *tc_tf)
 				return NA;
 			case FOP_STATE_INIT:
 				ret = resume(tc_tf);
-				if (ret) {
+				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
 				}
@@ -2780,7 +2790,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2790,7 +2800,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2800,7 +2810,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2810,7 +2820,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2820,7 +2830,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2830,7 +2840,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2881,7 +2891,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2891,7 +2901,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2901,7 +2911,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2911,7 +2921,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2921,7 +2931,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2931,7 +2941,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2981,7 +2991,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_ACTIVE:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -2991,7 +3001,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -3001,7 +3011,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_RT_WAIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -3011,7 +3021,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -3021,7 +3031,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_BC:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -3031,7 +3041,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT:
 			// Alert
 			ret = alert(tc_tf);
-			if (ret) {
+			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
@@ -3041,5 +3051,4 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 			tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 			return UNDEF_ERROR;
 	}
-
 }

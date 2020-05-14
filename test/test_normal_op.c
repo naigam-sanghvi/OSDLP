@@ -38,11 +38,18 @@ bool end_process;
 int packets_rxed = 0;
 uint16_t active_vcid = 0;
 
+int
+tc_rx_queue_clear(uint16_t vcid)
+{
+	reset_queue(&rx_queues[vcid]);
+	return 0;
+}
+
 void *
 transmitter(void *vargp)
 {
 	notification_t notif;
-
+	int tc_tx_ret;
 	pthread_mutex_lock(&lock);
 	notif = initiate_no_clcw(&tc_tx);
 	assert_int_equal(notif, POSITIVE_DIR);
@@ -70,7 +77,9 @@ transmitter(void *vargp)
 		    tc_tx_unseg.cop_cfg.fop.signal == POSITIVE_TX ||
 		    tc_tx_unseg.cop_cfg.fop.signal == POSITIVE_DIR) {
 			if (tc_tx_unseg.seg_status.flag == SEG_IN_PROGRESS) {
-				notif = tc_transmit(&tc_tx_unseg, buf, size);
+				tc_tx_ret = tc_transmit(&tc_tx_unseg, buf, size);
+				assert_int_equal(tc_tx_ret, TC_TX_OK);
+				assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 			} else {
 				if (packets_txed == 0) {
 					continue;
@@ -91,10 +100,11 @@ transmitter(void *vargp)
 
 				pthread_mutex_lock(&lock);
 				/* Transmit the frame */
-				notif = tc_transmit(&tc_tx_unseg, buf, size);
+				tc_tx_ret = tc_transmit(&tc_tx_unseg, buf, size);
+
 				pthread_mutex_unlock(&lock);
 			}
-			if (notif == DELAY_RESP) {
+			if (tc_tx_ret == -TC_TX_DELAY) {
 				/* In this case, COP has informed us that although a frame was inserted
 				 * in the wait queue, for some reason it hasn't been able to transmit it
 				 * yet. For this, we'll have to check the 'signal' field in the transfer
@@ -137,7 +147,7 @@ transmitter(void *vargp)
 		    tc_tx.cop_cfg.fop.signal == POSITIVE_TX ||
 		    tc_tx.cop_cfg.fop.signal == POSITIVE_DIR) {
 			if (tc_tx.seg_status.flag == SEG_IN_PROGRESS) {
-				notif = tc_transmit(&tc_tx, buf, size);
+				tc_tx_ret = tc_transmit(&tc_tx, buf, size);
 			} else {
 				if (packets_txed == 0) {
 					has_packets = false;
@@ -155,11 +165,11 @@ transmitter(void *vargp)
 				prepare_typea_data_frame(&tc_tx, buf, size);
 
 				pthread_mutex_lock(&lock);
-				notif = tc_transmit(&tc_tx, buf, size);
+				tc_tx_ret = tc_transmit(&tc_tx, buf, size);
 				total_packets++;
 				pthread_mutex_unlock(&lock);
 			}
-			if (notif == DELAY_RESP) {
+			if (tc_tx_ret == -TC_TX_DELAY) {
 				continue;
 			}
 			if (packets_txed == 0) {

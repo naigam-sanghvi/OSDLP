@@ -35,7 +35,7 @@ init(struct queue *handle,
 	handle->item_size = item_size;
 	handle->mem_space = (uint8_t *)malloc(num_items * item_size * sizeof(uint8_t));
 	if (handle->mem_space == NULL) {
-		return 1;
+		return -1;
 	}
 	return 0;
 }
@@ -53,7 +53,7 @@ enqueue(struct queue *que, void *pkt)
 		que->inqueue++;
 		return 0;
 	} else {
-		return 1;
+		return -1;
 	}
 }
 
@@ -89,7 +89,7 @@ dequeue(struct queue *que, void *pkt)
 		que->inqueue--;
 		return 0;
 	} else {
-		return 1;
+		return -1;
 	}
 }
 

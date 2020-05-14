@@ -79,7 +79,8 @@ test_simple_bd_frame(void **state)
 	                 farm_init_st, farm_wnd_width);         /*Prepare config structs*/
 
 	notification_t notif;
-	farm_result_t farm_ret;
+	int tc_tx_ret;
+	int tc_rx_ret;
 
 	notif = initiate_no_clcw(&tc_tx);               /* Initiate service*/
 	assert_int_equal(notif, POSITIVE_DIR);
@@ -89,21 +90,24 @@ test_simple_bd_frame(void **state)
 	}
 	prepare_typeb_data_frame(&tc_tx, buf, 100);
 
-	notif = tc_transmit(&tc_tx, buf, 100);            /* Transmit packet */
-	assert_int_equal(notif, ACCEPT_TX);
+	tc_tx_ret = tc_transmit(&tc_tx, buf, 100);            /* Transmit packet */
+	assert_int_equal(tc_tx_ret, TC_TX_OK);
+	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 	assert_int_equal(1, uplink_channel.inqueue);
 	memcpy(temp, tc_tx.mission.util.buffer, 110);	/* Transmit 2nd packet */
-	notif = tc_transmit(&tc_tx, buf, 100);
-	assert_int_equal(notif, ACCEPT_TX);
+	tc_tx_ret = tc_transmit(&tc_tx, buf, 100);
+	assert_int_equal(tc_tx_ret, TC_TX_OK);
+	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 	assert_int_equal(2, uplink_channel.inqueue);
 
 	dequeue(&uplink_channel, test_util);
-	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);    /* Receive first packet*/
-	assert_int_equal(farm_ret, POSITIVE_DIR);
+	tc_rx_ret = tc_receive(test_util,
+	                       TC_MAX_FRAME_LEN);    /* Receive first packet*/
+	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
 	dequeue(&uplink_channel, test_util);
-	farm_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);    /* Receive 2nd packet*/
-	assert_int_equal(farm_ret, POSITIVE_DIR);
+	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);    /* Receive 2nd packet*/
+	assert_int_equal(tc_rx_ret, TC_RX_OK);
 	assert_int_equal(2, rx_queues[1].inqueue);
 }
 

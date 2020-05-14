@@ -245,18 +245,10 @@ bd_reject(struct tc_transfer_frame *tc_tf);
 /* Queue API */
 
 /**
- * Returns the size of the wait queue
- * @param the vcid
- */
-__attribute__((weak))
-uint16_t
-tc_wait_queue_size(uint16_t);
-
-/**
  * Enqueues an item on the wait queue
  * @param the buffer to enqueue
  * @param the vcid
- * Returns 0 for success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -266,7 +258,7 @@ tc_wait_queue_enqueue(void *, uint16_t);
  * Dequeues an item from the wait queue
  * @param the buffer to hold the item
  * @param the vcid
- * Returns 0 for success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -275,6 +267,8 @@ tc_wait_queue_dequeue(void *, uint16_t);
 /**
  * Returns if the wait queue is empty
  * @param the vcid
+ *
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 bool
@@ -283,25 +277,17 @@ tc_wait_queue_empty(uint16_t);
 /**
  * Clears the wait queue
  * @param the vcid
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
 tc_wait_queue_clear(uint16_t);
 
-
-/**
- * Returns the size of the sent queue
- * @param the vcid
- */
-__attribute__((weak))
-uint16_t
-tc_sent_queue_size(uint16_t);
-
 /**
  * Enqueues an item on the sent queue
  * @param the queue_item to enqueue
  * @param the vcid
- * Returns 0 for success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -312,7 +298,7 @@ tc_sent_queue_enqueue(struct queue_item *, uint16_t);
  * Dequeues an item from the sent queue
  * @param the queue_item to hold the item
  * @param the vcid
- * Returns 0 for success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -327,17 +313,9 @@ bool
 tc_sent_queue_empty(uint16_t);
 
 /**
- * Returns if the sent queue is full
- * @param the vcid
- */
-__attribute__((weak))
-bool
-tc_sent_queue_full(uint16_t);
-
-/**
  * Clears the sent queue
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -348,7 +326,7 @@ tc_sent_queue_clear(uint16_t);
  * queue.
  * @param the pointer to the item of the queue
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -364,14 +342,6 @@ bool
 tc_rx_queue_full(uint16_t);
 
 /**
- * Clears the RX queue
- * @param the vcid
- */
-__attribute__((weak))
-int
-tc_rx_queue_clear(uint16_t);
-
-/**
  * Checks if tx queue is full
  * @param the vcid
  */
@@ -385,7 +355,7 @@ tc_tx_queue_full();
  * the higher layers to stop the flow
  * of packets if some error occurs.
  * @param the buffer to be enqueued
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -394,7 +364,7 @@ tc_tx_queue_enqueue(uint8_t *, uint16_t);
 /**
  * Starts the timer
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -403,7 +373,7 @@ timer_start(uint16_t);
 /**
  * Stops the timer
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -414,7 +384,7 @@ timer_cancel(uint16_t);
  * lower levels, eg purge the tx queue.
  * This is used to facilitate retransmissions
  *
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -424,7 +394,7 @@ cancel_lower_ops();
  * Marks all type_A queue_item structs on the
  * sent queue as 'to be retransmitted'
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -434,7 +404,7 @@ mark_ad_as_rt(uint16_t);
  * Marks the type_B queue_item struct on the
  * sent queue as 'to be retransmitted'
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -445,7 +415,7 @@ mark_bc_as_rt(uint16_t);
  * the sent queue
  * @param the queue_item to be reset
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
@@ -456,7 +426,7 @@ reset_rt_frame(struct queue_item *, uint16_t);
  * with the retransmit flag on.
  * @param the queue_item that will be fetched
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int

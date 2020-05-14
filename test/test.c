@@ -121,9 +121,21 @@ tc_sent_queue_head(struct queue_item *qi, uint16_t vcid)
 		qi->type = item->type;
 		return 0;
 	} else {
-		return 1;
+		return -1;
 	}
 
+}
+
+struct tc_transfer_frame *
+tc_get_tx_config(uint16_t vcid)
+{
+	if (vcid == 1) {
+		return &tc_tx;
+	} else if (vcid == 0) {
+		return &tc_tx_unseg;
+	} else {
+		return NULL;
+	}
 }
 
 
@@ -180,7 +192,7 @@ int
 tc_rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
 {
 	int ret = enqueue(&rx_queues[vcid], buffer);
-	if (ret == 1) {
+	if (ret < 0) {
 		if (tc_rx_queue_full(vcid)) {
 			ret = enqueue_now(&rx_queues[vcid], buffer);
 			return 0;
@@ -188,30 +200,20 @@ tc_rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
 	} else {
 		return 0;
 	}
-	return 1;
+	return -1;
 }
 
-struct tc_transfer_frame *
-tc_get_rx_config(uint16_t vcid)
+int
+tc_get_rx_config(struct tc_transfer_frame **tf, uint16_t vcid)
 {
 	if (vcid == 1) {
-		return &tc_rx;
+		*tf = &tc_rx;
+		return 0;
 	} else if (vcid == 0) {
-		return &tc_rx_unseg;
+		*tf = &tc_rx_unseg;
+		return 0;
 	} else {
-		return NULL;
-	}
-}
-
-struct tc_transfer_frame *
-tc_get_tx_config(uint16_t vcid)
-{
-	if (vcid == 1) {
-		return &tc_tx;
-	} else if (vcid == 0) {
-		return &tc_tx_unseg;
-	} else {
-		return NULL;
+		return -1;
 	}
 }
 
@@ -229,7 +231,7 @@ mark_ad_as_rt(uint16_t vcid)
 	for (int i = 0; i < sent_queues[vcid].inqueue; i++) {
 		item = (struct local_queue_item *)get_element(&sent_queues[vcid], i);
 		if (!item) {
-			return 1;
+			return -1;
 		}
 		if (item->type == TYPE_A) {
 			item->rt_flag = RT_FLAG_ON;
@@ -245,7 +247,7 @@ get_first_ad_rt_frame(struct queue_item *qi, uint16_t vcid)
 	for (int i = 0; i < sent_queues[vcid].inqueue; i++) {
 		item = (struct local_queue_item *)get_element(&sent_queues[vcid], i);
 		if (!item) {
-			return 1;
+			return -1;
 		}
 		if (item->type == TYPE_A && item->rt_flag == RT_FLAG_ON) {
 			qi->fdu = item->fdu;
@@ -255,7 +257,7 @@ get_first_ad_rt_frame(struct queue_item *qi, uint16_t vcid)
 			return 0;
 		}
 	}
-	return 1;
+	return -1;
 }
 
 int
@@ -265,14 +267,14 @@ reset_rt_frame(struct queue_item *qi, uint16_t vcid)
 	for (int i = 0; i < sent_queues[vcid].inqueue; i++) {
 		item = (struct local_queue_item *)get_element(&sent_queues[vcid], i);
 		if (!item) {
-			return 1;
+			return -1;
 		}
 		if (item->seq_num == qi->seq_num) {
 			item->rt_flag = RT_FLAG_OFF;
 			return 0;
 		}
 	}
-	return 1;
+	return -1;
 }
 
 int
@@ -281,18 +283,11 @@ mark_bc_as_rt(uint16_t vcid)
 	struct queue_item *item;
 	item = (struct queue_item *)front(&sent_queues[vcid]);
 	if (!item) {
-		return 1;
+		return -1;
 	}
 	if (item->type == TYPE_B) {
 		item->rt_flag = RT_FLAG_ON;
 	}
-	return 0;
-}
-
-int
-tc_rx_queue_clear(uint16_t vcid)
-{
-	reset_queue(&rx_queues[vcid]);
 	return 0;
 }
 
@@ -373,14 +368,14 @@ setup_tc_configs(struct tc_transfer_frame *tc_tx,
 	ret = tc_init(tc_tx, scid, TC_MAX_SDU_SIZE,
 	              max_frame_size, max_fifo_size, vcid, mapid, crc,
 	              seg_hdr, bypass, ctrl, util_tx, *fop_conf);
-	assert_int_not_equal(ret, 1);
+	assert_int_not_equal(ret, -1);
 	prepare_farm(farm, farm_init_st, farm_wnd_width);
 	memcpy(&farm_conf->farm, farm, sizeof(struct farm_config));
 	//farm_conf.farm = farm;
 	ret = tc_init(tc_rx, scid, TC_MAX_SDU_SIZE,
 	              max_frame_size, max_fifo_size, vcid, mapid, crc,
 	              seg_hdr, bypass, ctrl, util_rx, *farm_conf);
-	assert_int_not_equal(ret, 1);
+	assert_int_not_equal(ret, -1);
 	return 0;
 }
 

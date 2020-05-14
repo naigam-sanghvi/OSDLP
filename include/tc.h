@@ -71,6 +71,22 @@ typedef enum {
 	COP_ERROR           = 4
 } farm_result_t;
 
+typedef enum {
+	TC_RX_OK               = 0,
+	TC_RX_FRAME_LEN_ERR    = 1,
+	TC_RX_CONFIG_ERR       = 2,
+	TC_RX_FRAME_VAL_ERR    = 3,
+	TC_RX_QUEUE_ERR        = 4,
+	TC_RX_COP_ERR          = 5
+} tc_rx_result_t;
+
+typedef enum {
+	TC_TX_OK               = 0,
+	TC_TX_QUEUE_FULL_ERR   = 1,
+	TC_TX_DELAY            = 2,
+	TC_TX_COP_ERR          = 3
+} tc_tx_result_t;
+
 struct tc_primary_hdr {
 	uint8_t             version_num     : 2;    /* TC version number*/
 	uint8_t             bypass          : 1;    /* Bypass flag*/
@@ -264,33 +280,48 @@ prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw);
 int
 frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer);
 
-farm_result_t
+/* Performs TC receive with COP
+ *
+ * @param the rx_buffer
+ * @param the length of the frame
+ *
+ * @return the negative value of tc_rx_result_t for error, 0 for success
+ *
+ */
+int
 tc_receive(uint8_t *rx_buffer, uint32_t length);
 
-notification_t
+
+/* Performs TC transmit with COP
+ *
+ * @param the transfer frame config struct
+ * @param the buffer containing the packet
+ * @param the length of the frame
+ *
+ * @return the negative value of tc_tx_result_t for error, 0 for success
+ *
+ */
+int
 tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length);
 
 /**
  * Returns the configuration struct for the specific vcid
+ *
+ * @param reference to the pointer to the transfer frame struct
  * @param the vcid
+ *
+ * @return error code. Negative for error, zero or positive for success
  */
 __attribute__((weak))
-struct tc_transfer_frame *
-tc_get_rx_config(uint16_t);
-
-/**
- * Returns the configuration struct for the specific vcid
- * @param the vcid
- */
-__attribute__((weak))
-struct tc_transfer_frame *
-tc_get_tx_config(uint16_t);
+int
+tc_get_rx_config(struct tc_transfer_frame **, uint16_t);
 
 /**
  * Enqueues an item on the rx queue
  * @param the buffer to be enqueued
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ *
+ * @return error code. Negative for error, zero or positive for success
  */
 __attribute__((weak))
 int
@@ -302,7 +333,8 @@ tc_rx_queue_enqueue(uint8_t *, uint16_t);
  * by deleting the tail item
  * @param the buffer to place the item
  * @param the vcid
- * Returns 0 on success, 1 otherwise
+ *
+ * @return error code. Negative for error, zero or positive for success
  */
 __attribute__((weak))
 int
