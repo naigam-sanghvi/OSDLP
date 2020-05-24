@@ -225,6 +225,8 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 					} else {
 						ret = tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 					}
+					tc_tf->mission.util.buffered_length = 0;
+					tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 					if (ret < 0) {
 						return -TC_RX_QUEUE_ERR;
 					} else {
@@ -304,6 +306,8 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 			} else {
 				ret = tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 			}
+			tc_tf->mission.util.buffered_length = 0;
+			tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 			if (ret < 0) {
 				return -TC_RX_QUEUE_ERR;
 			} else {
