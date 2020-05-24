@@ -34,6 +34,9 @@
 #define NUMVCS	           3
 #define TC_MAX_SDU_SIZE	   1024
 #define TM_TX_CAPACITY     10
+#define TC_MAX_FRAME_LEN   256
+#define TM_MAX_SDU_LEN     1024
+#define TM_FRAME_LEN       256
 
 struct queue  	           wait_queues[NUMVCS];     /* Wait queue */
 struct queue	           sent_queues[NUMVCS];     /* Sent queue */
