@@ -159,20 +159,20 @@ tc_tx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
 	int ret = enqueue(&uplink_channel, buffer);
 	if ((buffer[0] >> 5) & 0x01) {   // Type B
 		if ((buffer[0] >> 4) & 0x01) { // Control
-			if (ret) {
+			if (ret < 0) {
 				bc_reject(tc);
 			} else {
 				bc_accept(tc);
 			}
 		} else {						// Data
-			if (ret) {
+			if (ret < 0) {
 				bd_reject(tc);
 			} else {
 				bd_accept(tc);
 			}
 		}
 	} else { // Type A
-		if (ret) {
+		if (ret < 0) {
 			ad_reject(tc);
 		} else {
 			ad_accept(tc);
