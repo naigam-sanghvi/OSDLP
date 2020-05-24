@@ -339,7 +339,7 @@ setup_queues(uint16_t up_chann_item_size,
 		assert_int_equal(ret, 0);
 
 		ret = init(&tx_queues[i],
-		           TM_MAX_FRAME_LEN,
+		           TM_FRAME_LEN,
 		           TM_TX_CAPACITY);
 		assert_int_equal(ret, 0);
 	}

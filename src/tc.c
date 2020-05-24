@@ -31,8 +31,8 @@
 int
 tc_init(struct tc_transfer_frame *tc_tf,
         uint16_t scid,
-        uint16_t max_sdu_size,
-        uint16_t max_frame_size,
+        uint16_t max_sdu_len,
+        uint16_t max_frame_len,
         uint16_t rx_fifo_size,
         uint8_t vcid,
         uint8_t mapid,
@@ -43,7 +43,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
         uint8_t *util_buffer,
         struct cop_config cop)
 {
-	if (max_frame_size <= TC_TRANSFER_FRAME_PRIMARY_HEADER) {
+	if (max_frame_len <= TC_TRANSFER_FRAME_PRIMARY_HEADER) {
 		return -1;
 	}
 	struct tc_mission_params m;
@@ -61,9 +61,9 @@ tc_init(struct tc_transfer_frame *tc_tf,
 	m.vcid									= vcid;
 	m.crc_flag								= crc_flag;
 	m.seg_hdr_flag							= seg_hdr_flag;
-	m.max_frame_size						= max_frame_size;
-	m.max_sdu_size							= max_sdu_size;
-	m.max_data_size							= max_frame_size;
+	m.max_frame_len						    = max_frame_len;
+	m.max_sdu_len							= max_sdu_len;
+	m.max_data_len							= max_frame_len;
 	m.rx_fifo_max_size                      = rx_fifo_size;
 	m.util.buffer							= util_buffer;
 	m.fixed_overhead_len					= TC_TRANSFER_FRAME_PRIMARY_HEADER;
@@ -77,7 +77,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
 	if (m.crc_flag == TC_CRC_PRESENT) {
 		m.fixed_overhead_len += 2;
 	}
-	m.max_data_size							= m.max_frame_size - m.fixed_overhead_len;
+	m.max_data_len							= m.max_frame_len - m.fixed_overhead_len;
 	m.util.loop_state 						= TC_LOOP_CLOSED;
 	tc_tf->mission							= m;
 	tc_tf->frame_data.seg_hdr.map_id 		= mapid & 0x3f;
@@ -214,7 +214,7 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 		if (tc_tf->mission.seg_hdr_flag) {
 			switch (tc_tf->frame_data.seg_hdr.seq_flag) {
 				case TC_UNSEG:
-					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_size) {
+					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_len) {
 						return -TC_RX_COP_ERR;
 					}
 					memcpy(tc_tf->mission.util.buffer,
@@ -239,7 +239,7 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 						return -TC_RX_COP_ERR;
 					}
 					tc_tf->mission.util.buffered_length = tc_tf->frame_data.data_len;
-					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_size) {
+					if (tc_tf->frame_data.data_len > tc_tf->mission.max_data_len) {
 						return -TC_RX_COP_ERR;
 					}
 					memcpy(tc_tf->mission.util.buffer,
@@ -254,7 +254,7 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 						return -TC_RX_COP_ERR;
 					}
 					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
-					    tc_tf->mission.max_sdu_size) {
+					    tc_tf->mission.max_sdu_len) {
 						tc_tf->mission.util.buffered_length = 0;
 						tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 						return -TC_RX_COP_ERR;
@@ -280,7 +280,7 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 						return -TC_RX_COP_ERR;
 					}
 					if (tc_tf->frame_data.data_len + tc_tf->mission.util.buffered_length >
-					    tc_tf->mission.max_sdu_size) {
+					    tc_tf->mission.max_sdu_len) {
 						tc_tf->mission.util.buffered_length = 0;
 						tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 						return -TC_RX_COP_ERR;
@@ -293,7 +293,7 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 					return TC_RX_OK;
 			}
 		} else {
-			if (tc_tf->frame_data.data_len > tc_tf->mission.max_sdu_size) {
+			if (tc_tf->frame_data.data_len > tc_tf->mission.max_sdu_len) {
 				tc_tf->mission.util.buffered_length = 0;
 				tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 				return -TC_RX_COP_ERR;
@@ -336,15 +336,15 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 		remaining = length - tc_tf->seg_status.octets_txed;
 	}
 	while (remaining > 0) {
-		if (remaining / tc_tf->mission.max_data_size > 0) {
-			bytes_avail = tc_tf->mission.max_data_size;
+		if (remaining / tc_tf->mission.max_data_len > 0) {
+			bytes_avail = tc_tf->mission.max_data_len;
 		} else {
 			bytes_avail = remaining;
 		}
 		/*Prepare the config struct*/
 		/* Check if a segmentation process has already begun*/
 		if (tc_tf->seg_status.flag) {
-			if (remaining > tc_tf->mission.max_data_size) {
+			if (remaining > tc_tf->mission.max_data_len) {
 				tc_tf->frame_data.seg_hdr.seq_flag = TC_CONT_SEG;
 			} else {
 				tc_tf->frame_data.seg_hdr.seq_flag = TC_LAST_SEG;
@@ -412,22 +412,22 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 
 void
 prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                         uint16_t size)
+                         uint16_t len)
 {
 	tc_tf->primary_hdr.bypass = TYPE_A;
 	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
 	tc_tf->frame_data.data = buffer;
-	tc_tf->frame_data.data_len = size;
+	tc_tf->frame_data.data_len = len;
 }
 
 void
 prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                         uint16_t size)
+                         uint16_t len)
 {
 	tc_tf->primary_hdr.bypass = TYPE_B;
 	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
 	tc_tf->frame_data.data = buffer;
-	tc_tf->frame_data.data_len = size;
+	tc_tf->frame_data.data_len = len;
 }
 
 void

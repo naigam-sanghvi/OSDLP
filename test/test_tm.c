@@ -98,13 +98,13 @@ test_tm_no_stuffing(void **state)
 	uint8_t scid 		= 30;
 	tm_crc_flag_t crc 	= TM_CRC_PRESENT;
 	tm_ocf_flag_t ocf 	= TM_OCF_NOTPRESENT;
-	uint16_t frame_len 	= TM_MAX_FRAME_LEN;
+	uint16_t frame_len 	= TM_FRAME_LEN;
 	uint8_t maxvcs 		= 2;
 	uint16_t maxfifo 	= 10;
 	int ret = tm_init(&tm_tx, scid,
 	                  &cnt, vcid, mcid, ocf,
 	                  0, 0, 0, NULL, 0, crc,
-	                  frame_len, maxvcs, maxfifo,
+	                  frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	                  TM_STUFFING_OFF, util_tx);
 	assert_int_equal(0, ret);
 
@@ -112,7 +112,7 @@ test_tm_no_stuffing(void **state)
 	              &cnt, vcid, mcid, ocf,
 	              0, 0,
 	              0, NULL, 0, crc,
-	              frame_len, maxvcs, maxfifo,
+	              frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	              TM_STUFFING_OFF, util_rx);
 	assert_int_equal(0, ret);
 
@@ -259,13 +259,13 @@ test_tm_with_stuffing(void **state)
 	uint8_t scid 		= 30;
 	tm_crc_flag_t crc 	= TM_CRC_PRESENT;
 	tm_ocf_flag_t ocf 	= TM_OCF_NOTPRESENT;
-	uint16_t frame_len 	= TM_MAX_FRAME_LEN;
+	uint16_t frame_len 	= TM_FRAME_LEN;
 	uint8_t maxvcs 		= 2;
 	uint16_t maxfifo 	= 10;
 	int ret = tm_init(&tm_tx, scid,
 	                  &cnt, vcid, mcid, ocf,
 	                  0, 0, 0, NULL, 0, crc,
-	                  frame_len, maxvcs, maxfifo,
+	                  frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	                  TM_STUFFING_ON, util_tx);
 	assert_int_equal(0, ret);
 
@@ -273,7 +273,7 @@ test_tm_with_stuffing(void **state)
 	              &cnt, vcid, mcid, ocf,
 	              0, 0,
 	              0, NULL, 0, crc,
-	              frame_len, maxvcs, maxfifo,
+	              frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	              TM_STUFFING_ON, util_rx);
 	assert_int_equal(0, ret);
 

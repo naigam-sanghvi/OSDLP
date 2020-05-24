@@ -40,14 +40,14 @@ test_tm(void **state)
 	int ret = tm_init(&tm_tx, scid,
 	                  &cnt, vcid, mcid, ocf,
 	                  0, 0, 0, NULL, 0, crc,
-	                  frame_len, maxvcs, maxfifo,
+	                  frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	                  TM_STUFFING_OFF, util_tx);
 	assert_int_equal(0, ret);
 
 	ret = tm_init(&tm_rx, 0,
 	              &cnt, 0, 0, 0, 0, 0,
 	              0, NULL, 0, crc,
-	              frame_len, maxvcs, maxfifo,
+	              frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	              TM_STUFFING_OFF, util_tx);
 	assert_int_equal(0, ret);
 

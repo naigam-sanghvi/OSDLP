@@ -28,7 +28,7 @@
 /**
  * The maximum allowed frame size
  */
-#define TM_MAX_FRAME_LEN                    256
+
 #define TM_VERSION_NUMBER                   0
 #define TM_SEC_HDR_VERSION_NUMBER           0
 #define	TM_PRIMARY_HDR_LEN                  6
@@ -37,7 +37,6 @@
 #define	TM_FIRST_HDR_PTR_NO_PKT_START       0x07FF
 #define TM_FIRST_HDR_PTR_OID                0x07FE
 #define TM_IDLE_PACKET                      0x07 << 5
-#define TM_MAX_SDU_LEN                      1024
 
 typedef enum {
 	TM_OCF_NOTPRESENT 	= 0,
@@ -141,6 +140,8 @@ struct tm_mission_params {
 	header_len;			/* Header length - Including secondary if present*/
 	uint16_t
 	max_data_len;		/* Maximum allowed data size per FDU*/
+	uint16_t
+	max_sdu_len;       /* Maximum size of higher layer frame*/
 	uint8_t                     crc_present;		/* CRC present flag*/
 	uint16_t                    max_vcs;			/* Max number oc VCs allowed*/
 	uint16_t                    tx_fifo_max_size;	/* Max TX FIFO capacity*/
@@ -192,6 +193,7 @@ tm_init(struct tm_transfer_frame *tm_tf,
         uint32_t ocf,
         tm_crc_flag_t crc_flag,
         uint16_t frame_size,
+        uint16_t max_sdu_len,
         uint16_t max_vcs,
         uint16_t max_fifo_size,
         tm_stuff_state_t stuffing,

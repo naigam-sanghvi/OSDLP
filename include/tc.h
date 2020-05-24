@@ -23,10 +23,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "clcw.h"
-/**
- * The maximum allowed frame size
- */
-#define TC_MAX_FRAME_LEN            256
+
 #define TC_VERSION_NUMBER           0
 #define UNLOCK_CMD                  0
 #define SETVR_BYTE1                 0x82
@@ -138,10 +135,10 @@ struct tc_mission_params {
 	struct tc_util_buf  util;
 	uint8_t             crc_flag;
 	uint8_t             seg_hdr_flag;
-	uint16_t            max_sdu_size;       /* Maximum size of higher layer frame*/
+	uint16_t            max_sdu_len;       /* Maximum size of higher layer frame*/
 	uint16_t
-	max_data_size;      /* Maximum size of data portion of packet*/
-	uint16_t            max_frame_size;     /* Maximum size of frame*/
+	max_data_len;      /* Maximum size of data portion of packet*/
+	uint16_t            max_frame_len;     /* Maximum size of frame*/
 	uint16_t            rx_fifo_max_size;
 	uint16_t            fixed_overhead_len;
 	uint16_t            spacecraft_id;      /* Spacecraft ID*/
@@ -229,9 +226,9 @@ struct tc_transfer_frame {
 int
 tc_init(struct tc_transfer_frame *tc_tf,
         uint16_t scid,
-        uint16_t max_fdu_size,
-        uint16_t max_frame_size,
-        uint16_t rx_fifo_size,
+        uint16_t max_fdu_len,
+        uint16_t max_frame_len,
+        uint16_t rx_fifo_len,
         uint8_t vcid,
         uint8_t mapid,
         tc_crc_flag_t crc_flag,
@@ -262,11 +259,11 @@ tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 
 void
 prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                         uint16_t size);
+                         uint16_t len);
 
 void
 prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                         uint16_t size);
+                         uint16_t len);
 
 void
 prepare_typeb_unlock(struct tc_transfer_frame *tc_tf);

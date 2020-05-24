@@ -36,6 +36,7 @@ tm_init(struct tm_transfer_frame *tm_tf,
         uint32_t ocf,
         tm_crc_flag_t crc_flag,
         uint16_t frame_size,
+        uint16_t max_sdu_len,
         uint16_t max_vcs,
         uint16_t max_fifo_size,
         tm_stuff_state_t stuffing,
@@ -66,6 +67,7 @@ tm_init(struct tm_transfer_frame *tm_tf,
 	m.util.expected_pkt_len     = 0;
 	m.stuff_state               = stuffing;
 	m.tx_fifo_max_size          = max_fifo_size;
+	m.max_sdu_len               = max_sdu_len;
 
 
 	uint16_t occupied = TM_PRIMARY_HDR_LEN;
@@ -465,7 +467,7 @@ handle_ns_ptr_positive(struct tm_transfer_frame *tm_tf)
 		usable_len = tm_tf->primary_hdr.status.first_hdr_ptr;
 	}
 	if (tm_tf->mission.util.buffered_length
-	    + usable_len > TM_MAX_SDU_LEN) {
+	    + usable_len > tm_tf->mission.max_sdu_len) {
 		tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 		tm_tf->mission.util.buffered_length = 0;
 		return TM_RX_ERROR;
@@ -573,7 +575,7 @@ handle_s_ptr_nopkt(struct tm_transfer_frame *tm_tf)
 	if (tm_tf->mission.util.loop_state == TM_LOOP_OPEN &&
 	    tm_tf->mission.util.expected_pkt_len == 0) {
 		if (tm_tf->mission.util.buffered_length + tm_tf->mission.max_data_len <
-		    TM_MAX_SDU_LEN) {
+		    tm_tf->mission.max_sdu_len) {
 			memcpy(&tm_tf->mission.util.buffer[tm_tf->mission.util.buffered_length],
 			       tm_tf->data, tm_tf->mission.max_data_len * sizeof(uint8_t));
 			ret = tm_get_packet_len(&length, tm_tf->mission.util.buffer,
@@ -607,7 +609,7 @@ handle_s_ptr_nopkt(struct tm_transfer_frame *tm_tf)
 	}
 
 	if (tm_tf->mission.util.buffered_length
-	    + tm_tf->mission.max_data_len > TM_MAX_SDU_LEN) {
+	    + tm_tf->mission.max_data_len > tm_tf->mission.max_sdu_len) {
 		tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 		tm_tf->mission.util.buffered_length = 0;
 		return TM_RX_ERROR;
@@ -642,7 +644,7 @@ handle_s_ptr_positive(struct tm_transfer_frame *tm_tf)
 	if (tm_tf->mission.util.loop_state == TM_LOOP_OPEN &&
 	    tm_tf->mission.util.expected_pkt_len == 0) {
 		if (tm_tf->mission.util.buffered_length +
-		    tm_tf->primary_hdr.status.first_hdr_ptr < TM_MAX_SDU_LEN) {
+		    tm_tf->primary_hdr.status.first_hdr_ptr < tm_tf->mission.max_sdu_len) {
 			memcpy(&tm_tf->mission.util.buffer[tm_tf->mission.util.buffered_length],
 			       tm_tf->data, tm_tf->primary_hdr.status.first_hdr_ptr * sizeof(uint8_t));
 			ret = tm_get_packet_len(&length, tm_tf->mission.util.buffer,

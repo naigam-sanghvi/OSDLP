@@ -22,10 +22,6 @@
 
 #include <stdint.h>
 
-#define CLCW_CTRL_WORD_TYPE     0
-#define	CLCW_VERSION_NUMBER     0
-#define	CLCW_COP_IN_EFFECT      1
-
 typedef enum {
 	CLCW_PL_AVAILABLE       = 0,
 	CLCW_PL_NOT_AVAILABLE   = 1
