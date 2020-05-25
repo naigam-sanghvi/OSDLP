@@ -516,6 +516,8 @@ transmit_type_bc(struct tc_transfer_frame *tc_tf)
 	tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
 	        tc_tf->frame_data.data_len);
 	tc_tf->cop_cfg.fop.tx_cnt = 1;
+	tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len +
+	                               tc_tf->frame_data.data_len - 1;
 	timer_start(tc_tf->primary_hdr.vcid);
 	item.type = TYPE_B;
 	item.fdu = tc_tf->mission.util.buffer;
@@ -540,6 +542,8 @@ transmit_type_bd(struct tc_transfer_frame *tc_tf)
 	tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
 	        tc_tf->frame_data.data_len);
 	//Set BD_Out not ready
+	tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len +
+	                               tc_tf->frame_data.data_len - 1;
 	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;

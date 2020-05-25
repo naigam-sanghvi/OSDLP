@@ -357,7 +357,8 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 			}
 		}
 
-		tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len + bytes_avail;
+		tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len + bytes_avail -
+		                               1;
 		tc_tf->frame_data.data_len = bytes_avail;
 		tc_tf->frame_data.data = buffer + (length - remaining);
 
