@@ -108,9 +108,6 @@ int
 alert(struct tc_transfer_frame *tc_tf);
 
 int
-accept(struct tc_transfer_frame *tc_tf);
-
-int
 resume(struct tc_transfer_frame *tc_tf);
 
 int

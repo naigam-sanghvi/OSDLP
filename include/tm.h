@@ -164,7 +164,6 @@ struct tm_transfer_frame {
  * @param mc_count the master channel count. Must be common
  * for all TM structures of different VCs
  * @param vcid the virtual channel ID
- * @param mcid master channel ID struct
  * @param ocf_flag flag for the presence or not of OCF
  * @param sec_hdr_fleg flag for the presence or not of
  * the secondary header
@@ -184,7 +183,6 @@ tm_init(struct tm_transfer_frame *tm_tf,
         uint16_t spacecraft_id,
         uint8_t *mc_count,
         uint8_t vcid,
-        uint8_t mcid,
         tm_ocf_flag_t ocf_flag,
         tm_sec_hdr_flag_t sec_hdr_fleg,
         tm_sync_flag_t sync_flag,
