@@ -52,6 +52,13 @@ tm_rx_queue_enqueue(uint8_t *pkt, uint8_t vcid)
 	return ret;
 }
 
+int
+tm_get_rx_config(struct tm_transfer_frame **tm, uint8_t vcid)
+{
+	*tm = &tm_rx;
+	return 0;
+}
+
 /**
  * Returns the length of the packet pointed to by
  * the pointer
@@ -90,8 +97,6 @@ void
 test_tm_no_stuffing(void **state)
 {
 	uint8_t rx_frame[TM_MAX_SDU_LEN];
-	struct tm_transfer_frame tm_tx;
-	struct tm_transfer_frame tm_rx;
 	uint8_t cnt 		= 0;
 	uint8_t vcid 		= 1;
 	uint8_t scid 		= 30;
@@ -161,27 +166,27 @@ test_tm_no_stuffing(void **state)
 	assert_int_equal(tx_queues[vcid].inqueue, 6);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 	assert_int_equal(rx_queues[vcid].inqueue, 1);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 	assert_int_equal(rx_queues[vcid].inqueue, 2);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 	assert_int_equal(rx_queues[vcid].inqueue, 3);
 
 	memset(util_rx, 0, TM_MAX_SDU_LEN);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	assert_int_equal(rx_queues[vcid].inqueue, 4);
 
@@ -207,40 +212,40 @@ test_tm_no_stuffing(void **state)
 	assert_int_equal(tx_queues[vcid].inqueue, 10);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	assert_int_equal(rx_queues[vcid].inqueue, 5);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	assert_int_equal(rx_queues[vcid].inqueue, 6);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	assert_int_equal(rx_queues[vcid].inqueue, 7);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	assert_int_equal(rx_queues[vcid].inqueue, 8);
 }
@@ -250,8 +255,6 @@ test_tm_with_stuffing(void **state)
 {
 	tm_rx_result_t rx_status;
 	uint8_t rx_frame[TM_MAX_SDU_LEN];
-	struct tm_transfer_frame tm_tx;
-	struct tm_transfer_frame tm_rx;
 	uint8_t cnt 		= 0;
 	uint8_t vcid 		= 1;
 	uint8_t scid 		= 30;
@@ -339,27 +342,27 @@ test_tm_with_stuffing(void **state)
 
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	rx_status = tm_receive(&tm_rx, rx_frame);
-	assert_int_equal(rx_status, TM_RX_PENDING);
+	rx_status = tm_receive(rx_frame);
+	assert_int_equal(rx_status, (tm_rx_result_t) - TM_RX_PENDING);
 	assert_int_equal(rx_queues[vcid].inqueue, 2);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	assert_int_equal(rx_queues[vcid].inqueue, 4);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	rx_status = tm_receive(&tm_rx, rx_frame);
-	assert_int_equal(rx_status, TM_RX_PENDING);
+	rx_status = tm_receive(rx_frame);
+	assert_int_equal(rx_status, (tm_rx_result_t) - TM_RX_PENDING);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	rx_status = tm_receive(&tm_rx, rx_frame);
+	rx_status = tm_receive(rx_frame);
 
 	assert_int_equal(rx_status, TM_RX_OK);
 	assert_int_equal(rx_queues[vcid].inqueue, 6);
@@ -395,11 +398,11 @@ test_tm_with_stuffing(void **state)
 	assert_int_equal(tx_queues[vcid].inqueue, 2);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	rx_status = tm_receive(&tm_rx, rx_frame);
-	assert_int_equal(rx_status, TM_RX_PENDING);
+	rx_status = tm_receive(rx_frame);
+	assert_int_equal(rx_status, (tm_rx_result_t) - TM_RX_PENDING);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	rx_status = tm_receive(&tm_rx, rx_frame);
+	rx_status = tm_receive(rx_frame);
 	assert_int_equal(rx_status, TM_RX_OK);
 
 	assert_int_equal(rx_queues[vcid].inqueue, 2);
@@ -439,10 +442,10 @@ test_tm_with_stuffing(void **state)
 	assert_int_equal(tx_queues[vcid].inqueue, 2);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	assert_int_equal(rx_queues[vcid].inqueue, 3);
 
@@ -465,15 +468,15 @@ test_tm_with_stuffing(void **state)
 	assert_int_equal(tx_queues[vcid].inqueue, 5);
 
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 	dequeue(&tx_queues[vcid], rx_frame);
-	tm_receive(&tm_rx, rx_frame);
+	tm_receive(rx_frame);
 
 	assert_int_equal(rx_queues[vcid].inqueue, 1);
 	dequeue(&rx_queues[vcid], rx_frame);

@@ -751,10 +751,15 @@ handle_rx_stuffing(struct tm_transfer_frame *tm_tf)
 }
 
 int
-tm_receive(struct tm_transfer_frame *tm_tf,
-           uint8_t *data_in)
+tm_receive(uint8_t *data_in)
 {
 	tm_rx_result_t notif;
+	uint8_t vcid = (data_in[1] >> 1) & 0x07;
+	struct tm_transfer_frame *tm_tf;
+	int ret = tm_get_rx_config(&tm_tf, vcid);
+	if (ret < 0) {
+		return -1;
+	}
 	tm_unpack(tm_tf, data_in);
 	if (tm_tf->primary_hdr.status.first_hdr_ptr == TM_FIRST_HDR_PTR_OID) {
 		return TM_RX_OID;
@@ -764,7 +769,7 @@ tm_receive(struct tm_transfer_frame *tm_tf,
 	} else { // Stuffing on
 		notif = handle_rx_stuffing(tm_tf);
 	}
-	return notif;
+	return -notif;
 }
 
 int

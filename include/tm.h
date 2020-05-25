@@ -222,8 +222,7 @@ tm_transmit(struct tm_transfer_frame *tm_tf,
             uint8_t *data_in, uint16_t length);
 
 int
-tm_receive(struct tm_transfer_frame *tm_tf,
-           uint8_t *data_in);
+tm_receive(uint8_t *data_in);
 
 /**
  * Transmits an FDU with idle packets only
@@ -308,5 +307,14 @@ tm_rx_queue_enqueue(uint8_t *, uint8_t);
 __attribute__((weak))
 int
 tm_get_packet_len(uint16_t *, uint8_t *, uint16_t);
+
+
+/**
+ * gets the TM config corresponding to the vcid
+ * @param the vcid
+ */
+__attribute__((weak))
+int
+tm_get_rx_config(struct tm_transfer_frame **, uint8_t);
 
 #endif /* INCLUDE_TM_H_ */

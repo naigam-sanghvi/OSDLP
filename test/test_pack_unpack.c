@@ -30,7 +30,6 @@ test_tm(void **state)
 	struct tm_transfer_frame tm_rx;
 	uint8_t cnt 		= 0;
 	uint8_t vcid 		= 4;
-	uint8_t mcid 		= 4;
 	uint8_t scid 		= 30;
 	tm_crc_flag_t crc 	= TM_CRC_PRESENT;
 	tm_ocf_flag_t ocf 	= TM_OCF_NOTPRESENT;
