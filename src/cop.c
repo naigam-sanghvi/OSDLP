@@ -2219,8 +2219,8 @@ initiate_with_clcw(struct tc_transfer_frame *tc_tf)
 			}
 			timer_start(tc_tf->primary_hdr.vcid);
 			tc_tf->cop_cfg.fop.state = FOP_STATE_INIT_NO_BC;
-			tc_tf->cop_cfg.fop.signal = ACCEPT_TX;
-			return ACCEPT_TX;
+			tc_tf->cop_cfg.fop.signal = ACCEPT_DIR;
+			return ACCEPT_DIR;
 		default:
 			tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 			return UNDEF_ERROR;

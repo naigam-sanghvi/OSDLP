@@ -83,7 +83,7 @@ test_vr(void **state)
 
 	/* Initiate with clcw */
 	notif = initiate_with_clcw(&tc_tx);
-	assert_int_equal(notif, ACCEPT_TX);
+	assert_int_equal(notif, ACCEPT_DIR);
 
 
 	/* Prepare clcw */
