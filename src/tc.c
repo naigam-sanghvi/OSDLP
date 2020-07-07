@@ -47,29 +47,29 @@ tc_init(struct tc_transfer_frame *tc_tf,
 		return -1;
 	}
 	struct tc_mission_params m;
-	tc_tf->primary_hdr.version_num 			= TC_VERSION_NUMBER;
-	tc_tf->primary_hdr.spacecraft_id		= scid & 0x03ff;
-	tc_tf->primary_hdr.vcid					= vcid;
-	tc_tf->primary_hdr.bypass				= bypass;
-	tc_tf->primary_hdr.ctrl_cmd				= ctrl_cmd;
-	tc_tf->primary_hdr.frame_len			= 0;
-	tc_tf->primary_hdr.frame_seq_num		= 0;
-	tc_tf->primary_hdr.rsvd_spare			= 0;
+	tc_tf->primary_hdr.version_num          = TC_VERSION_NUMBER;
+	tc_tf->primary_hdr.spacecraft_id        = scid & 0x03ff;
+	tc_tf->primary_hdr.vcid                 = vcid;
+	tc_tf->primary_hdr.bypass               = bypass;
+	tc_tf->primary_hdr.ctrl_cmd             = ctrl_cmd;
+	tc_tf->primary_hdr.frame_len            = 0;
+	tc_tf->primary_hdr.frame_seq_num        = 0;
+	tc_tf->primary_hdr.rsvd_spare           = 0;
 
-	m.version_num							= TC_VERSION_NUMBER;
-	m.spacecraft_id							= scid;
-	m.vcid									= vcid;
-	m.crc_flag								= crc_flag;
-	m.seg_hdr_flag							= seg_hdr_flag;
-	m.max_frame_len						    = max_frame_len;
-	m.max_sdu_len							= max_sdu_len;
-	m.max_data_len							= max_frame_len;
+	m.version_num                           = TC_VERSION_NUMBER;
+	m.spacecraft_id                         = scid;
+	m.vcid                                  = vcid;
+	m.crc_flag                              = crc_flag;
+	m.seg_hdr_flag                          = seg_hdr_flag;
+	m.max_frame_len                         = max_frame_len;
+	m.max_sdu_len                           = max_sdu_len;
+	m.max_data_len                          = max_frame_len;
 	m.rx_fifo_max_size                      = rx_fifo_size;
-	m.util.buffer							= util_buffer;
-	m.fixed_overhead_len					= TC_TRANSFER_FRAME_PRIMARY_HEADER;
-	m.unlock_cmd							= 0;
-	m.set_vr_cmd[0]							= SETVR_BYTE1;
-	m.set_vr_cmd[1]							= SETVR_BYTE2;
+	m.util.buffer                           = util_buffer;
+	m.fixed_overhead_len                    = TC_TRANSFER_FRAME_PRIMARY_HEADER;
+	m.unlock_cmd                            = 0;
+	m.set_vr_cmd[0]                         = SETVR_BYTE1;
+	m.set_vr_cmd[1]                         = SETVR_BYTE2;
 
 	if (m.seg_hdr_flag == TC_SEG_HDR_PRESENT) {
 		m.fixed_overhead_len += 1;
@@ -77,11 +77,14 @@ tc_init(struct tc_transfer_frame *tc_tf,
 	if (m.crc_flag == TC_CRC_PRESENT) {
 		m.fixed_overhead_len += 2;
 	}
-	m.max_data_len							= m.max_frame_len - m.fixed_overhead_len;
-	m.util.loop_state 						= TC_LOOP_CLOSED;
-	tc_tf->mission							= m;
-	tc_tf->frame_data.seg_hdr.map_id 		= mapid & 0x3f;
-	tc_tf->cop_cfg 							= cop;
+	m.max_data_len                          = m.max_frame_len -
+	                m.fixed_overhead_len;
+	m.util.loop_state                       = TC_LOOP_CLOSED;
+	tc_tf->mission                          = m;
+	tc_tf->frame_data.seg_hdr.map_id        = mapid & 0x3f;
+	tc_tf->cop_cfg                          = cop;
+	tc_tf->seg_status.flag                  = SEG_ENDED;
+	tc_tf->seg_status.octets_txed           = 0;
 	return 0;
 }
 
@@ -89,24 +92,24 @@ void
 tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in)
 {
 	struct tc_primary_hdr tc_p_hdr;
-	tc_p_hdr.version_num   	= ((pkt_in[0] >> 6) & 0x03);
-	tc_p_hdr.bypass   		= ((pkt_in[0] >> 5) & 0x01);
-	tc_p_hdr.ctrl_cmd 		= ((pkt_in[0] >> 4) & 0x01);
-	tc_p_hdr.rsvd_spare    	= ((pkt_in[0] >> 2) & 0x03);
-	tc_p_hdr.spacecraft_id 	= (((pkt_in[0] & 0x03) << 8) | pkt_in[1]);
+	tc_p_hdr.version_num    = ((pkt_in[0] >> 6) & 0x03);
+	tc_p_hdr.bypass         = ((pkt_in[0] >> 5) & 0x01);
+	tc_p_hdr.ctrl_cmd       = ((pkt_in[0] >> 4) & 0x01);
+	tc_p_hdr.rsvd_spare     = ((pkt_in[0] >> 2) & 0x03);
+	tc_p_hdr.spacecraft_id  = (((pkt_in[0] & 0x03) << 8) | pkt_in[1]);
 
-	tc_p_hdr.vcid 			= ((pkt_in[2] >> 2) & 0x3f);
-	tc_p_hdr.frame_len 		= (((pkt_in[2] & 0x03) << 8) | pkt_in[3]);
-	tc_p_hdr.frame_seq_num 	= pkt_in[4];
+	tc_p_hdr.vcid           = ((pkt_in[2] >> 2) & 0x3f);
+	tc_p_hdr.frame_len      = (((pkt_in[2] & 0x03) << 8) | pkt_in[3]);
+	tc_p_hdr.frame_seq_num  = pkt_in[4];
 
-	tc_tf->primary_hdr 		= tc_p_hdr;
+	tc_tf->primary_hdr      = tc_p_hdr;
 
 	tc_tf->frame_data.data_len = tc_p_hdr.frame_len + 1 -
 	                             tc_tf->mission.fixed_overhead_len;
 
 	if (tc_tf->mission.seg_hdr_flag) {
-		tc_tf->frame_data.seg_hdr.seq_flag 	= (pkt_in[5] >> 6) & 0x03;
-		tc_tf->frame_data.seg_hdr.map_id 	= pkt_in[5] & 0x3f;
+		tc_tf->frame_data.seg_hdr.seq_flag  = (pkt_in[5] >> 6) & 0x03;
+		tc_tf->frame_data.seg_hdr.map_id    = pkt_in[5] & 0x3f;
 		tc_tf->frame_data.data = &pkt_in[6];
 
 	} else {
