@@ -163,8 +163,6 @@ tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 int
 frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer)
 {
-	uint8_t check[1000];
-	memcpy(check, rx_buffer, tc_tf->primary_hdr.frame_len + 1);
 	if (tc_tf->mission.version_num != tc_tf->primary_hdr.version_num) {
 		return -1;
 	}
