@@ -55,7 +55,7 @@ buffer_release(struct tc_transfer_frame *tc_tf)
 void
 reset_wait(struct tc_transfer_frame *tc_tf)
 {
-	tc_tf->cop_cfg.farm.wait = 0;
+	tc_tf->cop_cfg.farm.wait = CLCW_DO_NOT_WAIT;
 	tc_tf->cop_cfg.farm.state = FARM_STATE_OPEN;
 }
 
@@ -66,7 +66,7 @@ farm_e1(struct tc_transfer_frame *tc_tf)
 		case FARM_STATE_OPEN:
 			tc_tf->cop_cfg.farm.vr = (tc_tf->cop_cfg.farm.vr + 1) % 256;
 			if (tc_tf->cop_cfg.farm.retransmit) {
-				tc_tf->cop_cfg.farm.retransmit = 0;
+				tc_tf->cop_cfg.farm.retransmit = CLCW_NO_RETRANSMIT;
 			}
 			return COP_ENQ;
 		case FARM_STATE_WAIT:
@@ -83,8 +83,8 @@ farm_e2(struct tc_transfer_frame *tc_tf)
 {
 	switch (tc_tf->cop_cfg.farm.state) {
 		case FARM_STATE_OPEN:
-			tc_tf->cop_cfg.farm.retransmit = 1;
-			tc_tf->cop_cfg.farm.wait = 1;
+			tc_tf->cop_cfg.farm.retransmit = CLCW_RETRANSMIT;
+			tc_tf->cop_cfg.farm.wait = CLCW_WAIT;
 			tc_tf->cop_cfg.farm.state = FARM_STATE_WAIT;
 			return COP_DISCARD;
 		case FARM_STATE_WAIT:
@@ -101,7 +101,7 @@ farm_e3(struct tc_transfer_frame *tc_tf)
 {
 	switch (tc_tf->cop_cfg.farm.state) {
 		case FARM_STATE_OPEN:
-			tc_tf->cop_cfg.farm.retransmit = 1;
+			tc_tf->cop_cfg.farm.retransmit = CLCW_RETRANSMIT;
 			return COP_DISCARD;
 		case FARM_STATE_WAIT:
 			return COP_DISCARD;
@@ -133,11 +133,11 @@ farm_e5(struct tc_transfer_frame *tc_tf)
 	switch (tc_tf->cop_cfg.farm.state) {
 		case FARM_STATE_OPEN:
 			tc_tf->cop_cfg.farm.state = FARM_STATE_LOCKOUT;
-			tc_tf->cop_cfg.farm.lockout = 1;
+			tc_tf->cop_cfg.farm.lockout = CLCW_LOCKOUT;
 			return COP_DISCARD;
 		case FARM_STATE_WAIT:
 			tc_tf->cop_cfg.farm.state = FARM_STATE_LOCKOUT;
-			tc_tf->cop_cfg.farm.lockout = 1;
+			tc_tf->cop_cfg.farm.lockout = CLCW_LOCKOUT;
 			return COP_DISCARD;
 		case FARM_STATE_LOCKOUT:
 			return COP_DISCARD;
@@ -174,21 +174,21 @@ farm_e7(struct tc_transfer_frame *tc_tf)
 		case FARM_STATE_OPEN:
 			tc_tf->cop_cfg.farm.farmb_cnt =
 			        (tc_tf->cop_cfg.farm.farmb_cnt + 1) % 4;
-			tc_tf->cop_cfg.farm.retransmit = 0;
+			tc_tf->cop_cfg.farm.retransmit = CLCW_NO_RETRANSMIT;
 			return COP_OK;
 		case FARM_STATE_WAIT:
 			tc_tf->cop_cfg.farm.farmb_cnt =
 			        (tc_tf->cop_cfg.farm.farmb_cnt + 1) % 4;
-			tc_tf->cop_cfg.farm.retransmit = 0;
-			tc_tf->cop_cfg.farm.wait = 0;
+			tc_tf->cop_cfg.farm.retransmit = CLCW_NO_RETRANSMIT;
+			tc_tf->cop_cfg.farm.wait = CLCW_DO_NOT_WAIT;
 			tc_tf->cop_cfg.farm.state = FARM_STATE_OPEN;
 			return COP_OK;
 		case FARM_STATE_LOCKOUT:
 			tc_tf->cop_cfg.farm.farmb_cnt =
 			        (tc_tf->cop_cfg.farm.farmb_cnt + 1) % 4;
-			tc_tf->cop_cfg.farm.retransmit = 0;
-			tc_tf->cop_cfg.farm.wait = 0;
-			tc_tf->cop_cfg.farm.lockout = 0;
+			tc_tf->cop_cfg.farm.retransmit = CLCW_NO_RETRANSMIT;
+			tc_tf->cop_cfg.farm.wait = CLCW_DO_NOT_WAIT;
+			tc_tf->cop_cfg.farm.lockout = CLCW_NO_LOCKOUT;
 			tc_tf->cop_cfg.farm.state = FARM_STATE_OPEN;
 			return COP_OK;
 		default:
@@ -204,14 +204,14 @@ farm_e8(struct tc_transfer_frame *tc_tf)
 			tc_tf->cop_cfg.farm.vr = tc_tf->frame_data.data[2];
 			tc_tf->cop_cfg.farm.farmb_cnt =
 			        (tc_tf->cop_cfg.farm.farmb_cnt + 1) % 4;
-			tc_tf->cop_cfg.farm.retransmit = 0;
+			tc_tf->cop_cfg.farm.retransmit = CLCW_NO_RETRANSMIT;
 			return COP_OK;
 		case FARM_STATE_WAIT:
 			tc_tf->cop_cfg.farm.vr = tc_tf->frame_data.data[2];
 			tc_tf->cop_cfg.farm.farmb_cnt =
 			        (tc_tf->cop_cfg.farm.farmb_cnt + 1) % 4;
-			tc_tf->cop_cfg.farm.retransmit = 0;
-			tc_tf->cop_cfg.farm.wait = 0;
+			tc_tf->cop_cfg.farm.retransmit = CLCW_NO_RETRANSMIT;
+			tc_tf->cop_cfg.farm.wait = CLCW_DO_NOT_WAIT;
 			tc_tf->cop_cfg.farm.state = FARM_STATE_OPEN;
 			return COP_OK;
 		case FARM_STATE_LOCKOUT:
