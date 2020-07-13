@@ -171,7 +171,7 @@ notification_t
 look_for_directive(struct tc_transfer_frame *tc_tf);
 
 notification_t
-handle_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw);
+handle_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf_buffer);
 
 notification_t
 handle_timer_expired(struct tc_transfer_frame *tc_tf);

@@ -28,11 +28,11 @@ tm_init(struct tm_transfer_frame *tm_tf,
         uint8_t *mc_count,
         uint8_t vcid,
         tm_ocf_flag_t ocf_flag,
+        tm_ocf_type_t ocf_type,
         tm_sec_hdr_flag_t sec_hdr_fleg,
         tm_sync_flag_t sync_flag,
         uint8_t sec_hdr_len,
         uint8_t *sec_hdr,
-        uint32_t ocf,
         tm_crc_flag_t crc_flag,
         uint16_t frame_size,
         uint16_t max_sdu_len,
@@ -67,6 +67,7 @@ tm_init(struct tm_transfer_frame *tm_tf,
 	m.stuff_state               = stuffing;
 	m.tx_fifo_max_size          = max_fifo_size;
 	m.max_sdu_len               = max_sdu_len;
+	m.ocf_type                  = ocf_type;
 
 
 	uint16_t occupied = TM_PRIMARY_HDR_LEN;
@@ -81,7 +82,6 @@ tm_init(struct tm_transfer_frame *tm_tf,
 		occupied_header = occupied;
 	}
 	if (tm_tf->primary_hdr.ocf == TM_OCF_PRESENT) {
-		tm_tf->ocf = ocf;
 		occupied += TM_OCF_LENGTH;
 	}
 	if (m.crc_present == TM_CRC_PRESENT) {
@@ -127,14 +127,8 @@ tm_pack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out,
 	}
 	/* Add OCF */
 	if (tm_tf->primary_hdr.ocf == TM_OCF_PRESENT) {
-		pkt_out[tm_tf->mission.header_len + tm_tf->mission.max_data_len] =
-		        (tm_tf->ocf >> 24) & 0xff;
-		pkt_out[tm_tf->mission.header_len + tm_tf->mission.max_data_len + 1] =
-		        (tm_tf->ocf >> 16) & 0xff;
-		pkt_out[tm_tf->mission.header_len + tm_tf->mission.max_data_len + 2] =
-		        (tm_tf->ocf >> 8) & 0xff;
-		pkt_out[tm_tf->mission.header_len + tm_tf->mission.max_data_len + 3] =
-		        tm_tf->ocf & 0xff;
+		memcpy(&pkt_out[tm_tf->mission.header_len + tm_tf->mission.max_data_len],
+		       tm_tf->ocf, 4 * sizeof(uint8_t));
 	}
 
 	/* Add CRC */
@@ -180,14 +174,9 @@ tm_unpack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_in)
 	tm_tf->data = &pkt_in[tm_tf->mission.header_len];
 
 	if (tm_tf->primary_hdr.ocf == TM_OCF_PRESENT) {
-		tm_tf->ocf = pkt_in[tm_tf->mission.header_len + tm_tf->mission.max_data_len] <<
-		             24;
-		tm_tf->ocf |= pkt_in[tm_tf->mission.header_len + tm_tf->mission.max_data_len +
-		                                               1] << 16;
-		tm_tf->ocf |= pkt_in[tm_tf->mission.header_len + tm_tf->mission.max_data_len +
-		                                               2] << 8;
-		tm_tf->ocf |= pkt_in[tm_tf->mission.header_len + tm_tf->mission.max_data_len +
-		                                               3];
+		memcpy(tm_tf->ocf, &pkt_in[tm_tf->mission.header_len +
+		                                                     tm_tf->mission.max_data_len],
+		       4 * sizeof(uint8_t));
 	}
 	if (tm_tf->mission.crc_present == TM_CRC_PRESENT) {
 		//tm_tf->crc = calc_crc(pkt_)

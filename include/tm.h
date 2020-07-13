@@ -43,6 +43,13 @@ typedef enum {
 	TM_OCF_PRESENT 		= 1
 } tm_ocf_flag_t;
 
+
+typedef enum {
+	TM_OCF_TYPE_1         = 0,
+	TM_OCF_TYPE_2         = 1
+} tm_ocf_type_t;
+
+
 typedef enum {
 	TM_CRC_NOTPRESENT 	= 0,
 	TM_CRC_PRESENT 		= 1
@@ -147,12 +154,13 @@ struct tm_mission_params {
 	uint16_t                    tx_fifo_max_size;	/* Max TX FIFO capacity*/
 	uint8_t                     vcid;
 	uint8_t                     stuff_state;
+	uint8_t                     ocf_type;
 };
 
 struct tm_transfer_frame {
 	struct tm_primary_hdr       primary_hdr;        /* The primary header struct*/
 	struct tm_sec_hdr           secondary_hdr;      /* The secondary header struct*/
-	uint32_t                    ocf;                /* The OCF struct */
+	uint8_t                     ocf[4];             /* The OCF field */
 	uint16_t                    crc;                /* CRC value*/
 	uint8_t                     *data;              /* Pointer to FDU*/
 	struct tm_mission_params    mission;            /* Mission specific parameters*/
@@ -184,11 +192,11 @@ tm_init(struct tm_transfer_frame *tm_tf,
         uint8_t *mc_count,
         uint8_t vcid,
         tm_ocf_flag_t ocf_flag,
+        tm_ocf_type_t ocf_type,
         tm_sec_hdr_flag_t sec_hdr_fleg,
         tm_sync_flag_t sync_flag,
         uint8_t sec_hdr_len,
         uint8_t *sec_hdr,
-        uint32_t ocf,
         tm_crc_flag_t crc_flag,
         uint16_t frame_size,
         uint16_t max_sdu_len,
