@@ -1966,103 +1966,103 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-handle_clcw(struct tc_transfer_frame *tc_tf,
-            struct clcw_frame *clcw)
+handle_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf_buffer)
 {
 	notification_t notif;
-	if (clcw->lockout == CLCW_NO_LOCKOUT) {
-		if (tc_tf->cop_cfg.fop.vs == clcw->report_value) {
-			if (clcw->rt == CLCW_NO_RETRANSMIT) {
-				if (clcw->wait == CLCW_DO_NOT_WAIT) {
-					if (clcw->report_value == tc_tf->cop_cfg.fop.nnr) {
+	clcw_unpack(&tc_tf->mission.clcw, ocf_buffer);
+	if (tc_tf->mission.clcw.lockout == CLCW_NO_LOCKOUT) {
+		if (tc_tf->cop_cfg.fop.vs == tc_tf->mission.clcw.report_value) {
+			if (tc_tf->mission.clcw.rt == CLCW_NO_RETRANSMIT) {
+				if (tc_tf->mission.clcw.wait == CLCW_DO_NOT_WAIT) {
+					if (tc_tf->mission.clcw.report_value == tc_tf->cop_cfg.fop.nnr) {
 						/*E1*/
 						notif = fop_e1(tc_tf);
 						return notif;
 					} else {
 						/* E2 */
-						notif = fop_e2(tc_tf, clcw);
+						notif = fop_e2(tc_tf, &tc_tf->mission.clcw);
 						return notif;
 					}
 				} else { // Wait flag  = 1
 					/*E3*/
-					notif = fop_e3(tc_tf, clcw);
+					notif = fop_e3(tc_tf, &tc_tf->mission.clcw);
 					return notif;
 				}
 			} else { // Retransmit flag = 1
 				/*E4*/
-				notif = fop_e4(tc_tf, clcw);
+				notif = fop_e4(tc_tf, &tc_tf->mission.clcw);
 				return notif;
 			}
 		}
 		/* Make sure the N(R) falls within bounds even if the counter has wrapped around */
-		else if (((tc_tf->cop_cfg.fop.vs > clcw->report_value)
-		          && (clcw->report_value >= tc_tf->cop_cfg.fop.nnr))
-		         || ((tc_tf->cop_cfg.fop.vs < clcw->report_value)
-		             && (clcw->report_value > tc_tf->cop_cfg.fop.nnr))
-		         || ((tc_tf->cop_cfg.fop.vs > clcw->report_value)
-		             && (clcw->report_value < tc_tf->cop_cfg.fop.nnr))) {
-			if (clcw->rt == CLCW_NO_RETRANSMIT) {
-				if (clcw->wait == CLCW_DO_NOT_WAIT) {
-					if (clcw->report_value == tc_tf->cop_cfg.fop.nnr) {
+		else if (((tc_tf->cop_cfg.fop.vs > tc_tf->mission.clcw.report_value)
+		          && (tc_tf->mission.clcw.report_value >= tc_tf->cop_cfg.fop.nnr))
+		         || ((tc_tf->cop_cfg.fop.vs < tc_tf->mission.clcw.report_value)
+		             && (tc_tf->mission.clcw.report_value > tc_tf->cop_cfg.fop.nnr))
+		         || ((tc_tf->cop_cfg.fop.vs > tc_tf->mission.clcw.report_value)
+		             && (tc_tf->mission.clcw.report_value < tc_tf->cop_cfg.fop.nnr))) {
+			if (tc_tf->mission.clcw.rt == CLCW_NO_RETRANSMIT) {
+				if (tc_tf->mission.clcw.wait == CLCW_DO_NOT_WAIT) {
+					if (tc_tf->mission.clcw.report_value == tc_tf->cop_cfg.fop.nnr) {
 						/*E5*/
-						notif = fop_e5(tc_tf, clcw);
+						notif = fop_e5(tc_tf, &tc_tf->mission.clcw);
 						return notif;
 					} else {
 						/* E6 */
-						notif = fop_e6(tc_tf, clcw);
+						notif = fop_e6(tc_tf, &tc_tf->mission.clcw);
 						return notif;
 					}
 				} else { // Wait flag  = 1
 					/*E7*/
-					notif = fop_e7(tc_tf, clcw);
+					notif = fop_e7(tc_tf, &tc_tf->mission.clcw);
 					return notif;
 				}
 			} else { // Retransmit flag = 1
 				if (tc_tf->cop_cfg.fop.tx_lim == 1) {
 					/*E101*/
-					if (clcw->report_value != tc_tf->cop_cfg.fop.nnr) {
-						notif = fop_e101(tc_tf, clcw);
+					if (tc_tf->mission.clcw.report_value != tc_tf->cop_cfg.fop.nnr) {
+						notif = fop_e101(tc_tf, &tc_tf->mission.clcw);
 						return notif;
 					}
 					/*E102*/
 					else {
-						notif = fop_e102(tc_tf, clcw);
+						notif = fop_e102(tc_tf, &tc_tf->mission.clcw);
 						return notif;
 					}
 				} else if (tc_tf->cop_cfg.fop.tx_lim > 1) {
-					if (clcw->report_value != tc_tf->cop_cfg.fop.nnr) {
+					if (tc_tf->mission.clcw.report_value != tc_tf->cop_cfg.fop.nnr) {
 						/*E8*/
-						if (clcw->wait == CLCW_DO_NOT_WAIT) {
-							notif = fop_e8(tc_tf, clcw);
+						if (tc_tf->mission.clcw.wait == CLCW_DO_NOT_WAIT) {
+							notif = fop_e8(tc_tf, &tc_tf->mission.clcw);
 							return notif;
 						}
 						/*E9*/
 						else { //Wait flag = 1
-							notif = fop_e9(tc_tf, clcw);
+							notif = fop_e9(tc_tf, &tc_tf->mission.clcw);
 							return notif;
 						}
 					} else { //N(R == NN{R}
 						if (tc_tf->cop_cfg.fop.tx_cnt
 						    < tc_tf->cop_cfg.fop.tx_lim) {
 							/*E10*/
-							if (clcw->wait == CLCW_DO_NOT_WAIT) {
-								notif = fop_e10(tc_tf, clcw);
+							if (tc_tf->mission.clcw.wait == CLCW_DO_NOT_WAIT) {
+								notif = fop_e10(tc_tf, &tc_tf->mission.clcw);
 								return notif;
 							}
 							/*E11*/
 							else { //Wait flag = 1
-								notif = fop_e11(tc_tf, clcw);
+								notif = fop_e11(tc_tf, &tc_tf->mission.clcw);
 								return notif;
 							}
 						} else { // Tx cnt >= Tx limit
 							/*E12*/
-							if (clcw->wait == CLCW_DO_NOT_WAIT) {
-								notif = fop_e12(tc_tf, clcw);
+							if (tc_tf->mission.clcw.wait == CLCW_DO_NOT_WAIT) {
+								notif = fop_e12(tc_tf, &tc_tf->mission.clcw);
 								return notif;
 							}
 							/*E103*/
 							else { //Wait flag = 1
-								notif = fop_e103(tc_tf, clcw);
+								notif = fop_e103(tc_tf, &tc_tf->mission.clcw);
 								return notif;
 							}
 						}
@@ -2074,12 +2074,12 @@ handle_clcw(struct tc_transfer_frame *tc_tf,
 			}
 		} else { // N(R) not within bounds
 			/*E13*/
-			notif = fop_e13(tc_tf, clcw);
+			notif = fop_e13(tc_tf, &tc_tf->mission.clcw);
 			return notif;
 		}
 	} else { // Lockout = 1
 		/*E14*/
-		notif = fop_e14(tc_tf, clcw);
+		notif = fop_e14(tc_tf, &tc_tf->mission.clcw);
 		return notif;
 	}
 }

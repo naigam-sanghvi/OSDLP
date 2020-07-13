@@ -20,6 +20,7 @@
 #include "tc.h"
 #include "cop.h"
 #include "crc.h"
+#include "clcw.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -454,14 +455,16 @@ prepare_typeb_unlock(struct tc_transfer_frame *tc_tf)
 }
 
 void
-prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw)
+prepare_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf)
 {
-	clcw->cop_in_effect = 1;
-	clcw->farm_b_counter = tc_tf->cop_cfg.farm.farmb_cnt;
-	clcw->lockout = tc_tf->cop_cfg.farm.lockout;
-	clcw->rt = tc_tf->cop_cfg.farm.retransmit;
-	clcw->wait = tc_tf->cop_cfg.farm.wait;
-	clcw->report_value = tc_tf->cop_cfg.farm.vr;
-	clcw->vcid = tc_tf->mission.vcid;
-	clcw->clcw_version_num = 0;
+	tc_tf->mission.clcw.ctrl_word_type = 0; // TM_OCF_TYPE_1
+	tc_tf->mission.clcw.cop_in_effect = 1;
+	tc_tf->mission.clcw.farm_b_counter = tc_tf->cop_cfg.farm.farmb_cnt;
+	tc_tf->mission.clcw.lockout = tc_tf->cop_cfg.farm.lockout;
+	tc_tf->mission.clcw.rt = tc_tf->cop_cfg.farm.retransmit;
+	tc_tf->mission.clcw.wait = tc_tf->cop_cfg.farm.wait;
+	tc_tf->mission.clcw.report_value = tc_tf->cop_cfg.farm.vr;
+	tc_tf->mission.clcw.vcid = tc_tf->mission.vcid;
+	tc_tf->mission.clcw.clcw_version_num = 0;
+	clcw_pack(&tc_tf->mission.clcw, ocf);
 }

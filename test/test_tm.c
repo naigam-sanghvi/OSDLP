@@ -21,6 +21,15 @@
 #include "test.h"
 #include "queue_util.h"
 
+
+/* Utility buffers */
+extern uint8_t                    util_tx[TC_MAX_SDU_SIZE];
+extern uint8_t                    util_rx[TC_MAX_SDU_SIZE];
+
+extern struct tm_transfer_frame   tm_tx;
+extern struct tm_transfer_frame   tm_rx;
+extern struct queue  	           tx_queues[NUMVCS];     /* TM TX queues */
+extern struct queue  	           rx_queues[NUMVCS];       /* Receiving queue */
 bool
 tm_tx_queue_empty(uint8_t vcid)
 {
@@ -106,16 +115,16 @@ test_tm_no_stuffing(void **state)
 	uint8_t maxvcs 		= 2;
 	uint16_t maxfifo 	= 10;
 	int ret = tm_init(&tm_tx, scid,
-	                  &cnt, vcid, ocf,
-	                  0, 0, 0, NULL, 0, crc,
+	                  &cnt, vcid, ocf, 0,
+	                  0, 0, 0, NULL, crc,
 	                  frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	                  TM_STUFFING_OFF, util_tx);
 	assert_int_equal(0, ret);
 
 	ret = tm_init(&tm_rx, 0,
-	              &cnt, vcid, ocf,
+	              &cnt, vcid, ocf, 0,
 	              0, 0,
-	              0, NULL, 0, crc,
+	              0, NULL, crc,
 	              frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	              TM_STUFFING_OFF, util_rx);
 	assert_int_equal(0, ret);
@@ -264,16 +273,16 @@ test_tm_with_stuffing(void **state)
 	uint8_t maxvcs 		= 2;
 	uint16_t maxfifo 	= 10;
 	int ret = tm_init(&tm_tx, scid,
-	                  &cnt, vcid, ocf,
-	                  0, 0, 0, NULL, 0, crc,
+	                  &cnt, vcid, ocf, 0,
+	                  0, 0, 0, NULL, crc,
 	                  frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	                  TM_STUFFING_ON, util_tx);
 	assert_int_equal(0, ret);
 
 	ret = tm_init(&tm_rx, 0,
-	              &cnt, vcid, ocf,
+	              &cnt, vcid, ocf, 0,
 	              0, 0,
-	              0, NULL, 0, crc,
+	              0, NULL, crc,
 	              frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
 	              TM_STUFFING_ON, util_rx);
 	assert_int_equal(0, ret);

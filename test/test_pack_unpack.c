@@ -19,6 +19,8 @@
 
 #include "test.h"
 
+uint8_t util[TC_MAX_SDU_SIZE];
+
 void
 test_tm(void **state)
 {
@@ -37,17 +39,17 @@ test_tm(void **state)
 	uint8_t maxvcs 		= 2;
 	uint16_t maxfifo 	= 10;
 	int ret = tm_init(&tm_tx, scid,
-	                  &cnt, vcid, ocf,
-	                  0, 0, 0, NULL, 0, crc,
+	                  &cnt, vcid, ocf, 0,
+	                  0, 0, 0, NULL, crc,
 	                  frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
-	                  TM_STUFFING_OFF, util_tx);
+	                  TM_STUFFING_OFF, util);
 	assert_int_equal(0, ret);
 
 	ret = tm_init(&tm_rx, 0,
-	              &cnt, 0, 0, 0, 0,
-	              0, NULL, 0, crc,
+	              &cnt, 0, 0, 0, 0, 0,
+	              0, NULL, crc,
 	              frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
-	              TM_STUFFING_OFF, util_tx);
+	              TM_STUFFING_OFF, util);
 	assert_int_equal(0, ret);
 
 

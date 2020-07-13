@@ -22,6 +22,21 @@
 #include "queue_util.h"
 
 
+extern struct queue
+	uplink_channel;          /* Queue simulating uplink channel */
+extern struct queue  	           rx_queues[NUMVCS];       /* Receiving queue */
+/* Config structs for the first VC*/
+extern struct tc_transfer_frame   tc_tx;
+extern struct tc_transfer_frame   tc_rx;
+
+extern uint8_t                    test_util[TC_MAX_FRAME_LEN];
+extern uint8_t                    temp[TC_MAX_FRAME_LEN];
+
+extern struct cop_config          cop_tx;
+extern struct cop_config          cop_rx;
+extern struct fop_config          fop;
+extern struct farm_config         farm;
+
 /**
  * Send two type BD frames and receive them in the RX queue
  */

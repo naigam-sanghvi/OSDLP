@@ -146,6 +146,7 @@ struct tc_mission_params {
 	uint8_t             version_num;
 	uint8_t             unlock_cmd;
 	uint8_t             set_vr_cmd[3];
+	struct clcw_frame   clcw;
 };
 
 /**
@@ -272,7 +273,7 @@ void
 prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr);
 
 void
-prepare_clcw(struct tc_transfer_frame *tc_tf, struct clcw_frame *clcw);
+prepare_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf);
 
 int
 frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer);

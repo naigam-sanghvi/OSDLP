@@ -38,6 +38,32 @@ bool end_process;
 int packets_rxed = 0;
 uint16_t active_vcid = 0;
 
+extern struct queue	           sent_queues[NUMVCS];     /* Sent queue */
+extern struct queue
+	downlink_channel;        /* Queue simulating downlink channel */
+extern struct queue
+	uplink_channel;          /* Queue simulating uplink channel */
+extern struct queue  	           rx_queues[NUMVCS];       /* Receiving queue */
+/* Config structs for the first VC*/
+extern struct tc_transfer_frame   tc_tx;
+extern struct tc_transfer_frame   tc_rx;
+
+/* Config structs for the second VC*/
+extern struct tc_transfer_frame   tc_tx_unseg;
+extern struct tc_transfer_frame   tc_rx_unseg;
+
+extern uint8_t                    test_util[TC_MAX_FRAME_LEN];
+
+extern struct cop_config          cop_tx;
+extern struct cop_config          cop_rx;
+extern struct fop_config          fop;
+extern struct farm_config         farm;
+
+extern struct cop_config          cop_tx_unseg;
+extern struct cop_config          cop_rx_unseg;
+extern struct fop_config          fop_unseg;
+extern struct farm_config         farm_unseg;
+
 int
 tc_rx_queue_clear(uint16_t vcid)
 {
@@ -192,7 +218,6 @@ void *
 receiver(void *vargp)
 {
 	int ret;
-	struct clcw_frame clcw;
 	int cnt = 10;
 	int rx_sleep;
 	int packets = 0;
@@ -226,11 +251,11 @@ receiver(void *vargp)
 			tc_receive(test_util, TC_MAX_FRAME_LEN);
 			/*Respond with the clcw */
 			if (((test_util[2] >> 2) & 0x3f) == 1)
-				prepare_clcw(&tc_rx, &clcw);
+				prepare_clcw(&tc_rx, test_util);
 			else if (((test_util[2] >> 2) & 0x3f) == 0)
-				prepare_clcw(&tc_rx_unseg, &clcw);
+				prepare_clcw(&tc_rx_unseg, test_util);
 			assert_int_equal(ret, 0);
-			clcw_pack(&clcw, test_util);
+			//clcw_pack(&clcw, test_util);
 
 			ret = enqueue(&downlink_channel, test_util);
 			assert_int_equal(ret, 0);
@@ -285,9 +310,9 @@ clcw_listener(void *vargp)
 			if (clcw.vcid == 0) {
 				/* This is the function that must be called whenever
 				 * a new clcw is received */
-				handle_clcw(&tc_tx_unseg, &clcw);
+				handle_clcw(&tc_tx_unseg, clcw_buf);
 			} else if (clcw.vcid == 1) {
-				handle_clcw(&tc_tx, &clcw);
+				handle_clcw(&tc_tx, clcw_buf);
 			}
 
 			pthread_mutex_unlock(&lock);
