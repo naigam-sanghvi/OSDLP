@@ -19,6 +19,44 @@
 
 #include "test.h"
 
+struct queue  	           wait_queues[NUMVCS];     /* Wait queue */
+struct queue	           sent_queues[NUMVCS];     /* Sent queue */
+struct queue
+	downlink_channel;        /* Queue simulating downlink channel */
+struct queue
+	uplink_channel;          /* Queue simulating uplink channel */
+struct queue  	           rx_queues[NUMVCS];       /* Receiving queue */
+/* Config structs for the first VC*/
+struct tc_transfer_frame   tc_tx;
+struct tc_transfer_frame   tc_rx;
+
+/* Config structs for the second VC*/
+struct tc_transfer_frame   tc_tx_unseg;
+struct tc_transfer_frame   tc_rx_unseg;
+
+/* Utility buffers */
+uint8_t                    util_tx[TC_MAX_SDU_SIZE];
+uint8_t                    util_rx[TC_MAX_SDU_SIZE];
+
+uint8_t                    util_tx_unseg[TC_MAX_SDU_SIZE];
+uint8_t                    util_rx_unseg[TC_MAX_SDU_SIZE];
+uint8_t                    test_util[TC_MAX_FRAME_LEN];
+uint8_t                    temp[TC_MAX_FRAME_LEN];
+
+struct cop_config          cop_tx;
+struct cop_config          cop_rx;
+struct fop_config          fop;
+struct farm_config         farm;
+
+struct cop_config          cop_tx_unseg;
+struct cop_config          cop_rx_unseg;
+struct fop_config          fop_unseg;
+struct farm_config         farm_unseg;
+
+struct tm_transfer_frame   tm_tx;
+struct tm_transfer_frame   tm_rx;
+struct queue  	           tx_queues[NUMVCS];     /* TM TX queues */
+
 uint16_t
 tc_wait_queue_size(uint16_t vcid)
 {

@@ -21,6 +21,15 @@
 #include "test.h"
 #include "queue_util.h"
 
+
+/* Utility buffers */
+extern uint8_t                    util_tx[TC_MAX_SDU_SIZE];
+extern uint8_t                    util_rx[TC_MAX_SDU_SIZE];
+
+extern struct tm_transfer_frame   tm_tx;
+extern struct tm_transfer_frame   tm_rx;
+extern struct queue  	           tx_queues[NUMVCS];     /* TM TX queues */
+extern struct queue  	           rx_queues[NUMVCS];       /* Receiving queue */
 bool
 tm_tx_queue_empty(uint8_t vcid)
 {

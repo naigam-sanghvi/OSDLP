@@ -38,6 +38,32 @@ bool end_process;
 int packets_rxed = 0;
 uint16_t active_vcid = 0;
 
+extern struct queue	           sent_queues[NUMVCS];     /* Sent queue */
+extern struct queue
+	downlink_channel;        /* Queue simulating downlink channel */
+extern struct queue
+	uplink_channel;          /* Queue simulating uplink channel */
+extern struct queue  	           rx_queues[NUMVCS];       /* Receiving queue */
+/* Config structs for the first VC*/
+extern struct tc_transfer_frame   tc_tx;
+extern struct tc_transfer_frame   tc_rx;
+
+/* Config structs for the second VC*/
+extern struct tc_transfer_frame   tc_tx_unseg;
+extern struct tc_transfer_frame   tc_rx_unseg;
+
+extern uint8_t                    test_util[TC_MAX_FRAME_LEN];
+
+extern struct cop_config          cop_tx;
+extern struct cop_config          cop_rx;
+extern struct fop_config          fop;
+extern struct farm_config         farm;
+
+extern struct cop_config          cop_tx_unseg;
+extern struct cop_config          cop_rx_unseg;
+extern struct fop_config          fop_unseg;
+extern struct farm_config         farm_unseg;
+
 int
 tc_rx_queue_clear(uint16_t vcid)
 {

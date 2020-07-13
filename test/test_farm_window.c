@@ -19,6 +19,23 @@
 
 #include "test.h"
 
+extern struct queue
+	uplink_channel;          /* Queue simulating uplink channel */
+
+/* Config structs for the first VC*/
+extern struct tc_transfer_frame   tc_tx;
+extern struct tc_transfer_frame   tc_rx;
+
+/* Config structs for the second VC*/
+extern struct tc_transfer_frame   tc_rx_unseg;
+
+extern uint8_t                    test_util[TC_MAX_FRAME_LEN];
+
+extern struct cop_config          cop_tx;
+extern struct cop_config          cop_rx;
+extern struct fop_config          fop;
+extern struct farm_config         farm;
+
 void
 test_vr(void **state)
 {
