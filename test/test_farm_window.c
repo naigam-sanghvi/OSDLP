@@ -100,25 +100,25 @@ test_vr(void **state)
 	}
 
 	/* Initiate with clcw */
-	notif = initiate_with_clcw(&tc_tx);
+	notif = osdlp_initiate_with_clcw(&tc_tx);
 	assert_int_equal(notif, ACCEPT_DIR);
 
 
 	/* Prepare clcw */
-	prepare_clcw(&tc_rx_unseg, ocf);
+	osdlp_prepare_clcw(&tc_rx_unseg, ocf);
 
 	/* Handle response */
-	notif = handle_clcw(&tc_tx, ocf);
+	notif = osdlp_handle_clcw(&tc_tx, ocf);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
 
 	/* Transmit two frames */
-	tc_tx_ret = tc_transmit(&tc_tx, buf, size);
+	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 
-	tc_tx_ret = tc_transmit(&tc_tx, buf, size);
+	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 	assert_int_equal(tc_tx.cop_cfg.fop.vs, 2);
@@ -128,235 +128,235 @@ test_vr(void **state)
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 
-	notif = handle_clcw(&tc_tx, ocf);
+	notif = osdlp_handle_clcw(&tc_tx, ocf);
 	assert_int_equal(notif, ACCEPT_TX);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.report_value, 2);
 
-	notif = handle_clcw(&tc_tx, ocf);
+	notif = osdlp_handle_clcw(&tc_tx, ocf);
 	assert_int_equal(notif, ACCEPT_TX);
 
 	/* Terminate service */
-	notif = terminate_ad(&tc_tx);
+	notif = osdlp_terminate_ad(&tc_tx);
 	assert_int_equal(notif, POSITIVE_DIR);
 
 	/*Set new high VS*/
-	notif = set_new_vs(&tc_tx, 15);
+	notif = osdlp_set_new_vs(&tc_tx, 15);
 	assert_int_equal(notif, POSITIVE_DIR);
 
 	/*Initiate without clcw*/
-	notif = initiate_no_clcw(&tc_tx);
+	notif = osdlp_initiate_no_clcw(&tc_tx);
 	assert_int_equal(notif, POSITIVE_DIR);
 
 	/* Transmit frame with wrong VS*/
-	tc_tx_ret = tc_transmit(&tc_tx, buf, size);
+	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, -TC_RX_COP_ERR);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.lockout, 1);
 
-	notif = terminate_ad(&tc_tx);
+	notif = osdlp_terminate_ad(&tc_tx);
 	assert_int_equal(notif, POSITIVE_DIR);
 
 
 	/* Initiate with unlock */
-	notif = set_new_vs(&tc_tx, 2);
+	notif = osdlp_set_new_vs(&tc_tx, 2);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	notif = initiate_with_unlock(&tc_tx);
+	notif = osdlp_initiate_with_unlock(&tc_tx);
 	assert_int_equal(notif, ACCEPT_DIR);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.lockout, 0);
 
-	notif = handle_clcw(&tc_tx, ocf);
+	notif = osdlp_handle_clcw(&tc_tx, ocf);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
 
-	tc_tx_ret = tc_transmit(&tc_tx, buf, size);
+	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.lockout, 0);
 
 
 
 	/* Transmit frames with wrong VS */
-	notif = terminate_ad(&tc_tx);
+	notif = osdlp_terminate_ad(&tc_tx);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	notif = set_new_vs(&tc_tx, 254);
+	notif = osdlp_set_new_vs(&tc_tx, 254);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	notif = initiate_with_setvr(&tc_tx, 254);
+	notif = osdlp_initiate_with_setvr(&tc_tx, 254);
 	assert_int_equal(notif, ACCEPT_DIR);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.lockout, 0);
 
-	notif = handle_clcw(&tc_tx, ocf);
+	notif = osdlp_handle_clcw(&tc_tx, ocf);
 	assert_int_equal(notif, POSITIVE_DIR);
 
 	/* Transmit a packet */
 
 	/* Set VS to 254 */
-	prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
 	tc_tx.cop_cfg.fop.vs = 255;	/*Inside positive window of FARM */
-	tc_pack(&tc_tx, test_util, buf, size);
-	ret = tc_tx_queue_enqueue(test_util, 1);
+	osdlp_tc_pack(&tc_tx, test_util, buf, size);
+	ret = osdlp_tc_tx_queue_enqueue(test_util, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, -TC_RX_COP_ERR);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.rt, 1);
 
 
 
 	/* Set VS to 0 */
-	prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
 	tc_tx.cop_cfg.fop.vs = 0;	/*Inside positive window of FARM */
-	tc_pack(&tc_tx, test_util, buf, size);
-	tc_tx_queue_enqueue(test_util, 1);
+	osdlp_tc_pack(&tc_tx, test_util, buf, size);
+	osdlp_tc_tx_queue_enqueue(test_util, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, -TC_RX_COP_ERR);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.report_value, 254);
 
 
 	/* Send two correct packets */
 	tc_tx.cop_cfg.fop.vs = 254;
-	prepare_typea_data_frame(&tc_tx, buf, size);
-	tc_tx_ret = tc_transmit(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.report_value, 255);
 
-	notif = handle_clcw(&tc_tx, ocf);
+	notif = osdlp_handle_clcw(&tc_tx, ocf);
 
 	/* Transmit a packet */
 
-	prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
 
-	tc_tx_ret = tc_transmit(&tc_tx, buf, size);
+	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.report_value, 0);
 
-	notif = handle_clcw(&tc_tx, ocf);
+	notif = osdlp_handle_clcw(&tc_tx, ocf);
 
 	/* Transmit a packet */
 
-	prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
 
-	tc_tx_ret = tc_transmit(&tc_tx, buf, size);
+	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.report_value, 1);
 
-	notif = handle_clcw(&tc_tx, ocf);
+	notif = osdlp_handle_clcw(&tc_tx, ocf);
 
 	/* Set VS to 255 */
 
 	tc_tx.cop_cfg.fop.vs = 255;	/*Inside negative window of FARM */
-	tc_pack(&tc_tx, test_util, buf, size);
-	tc_tx_queue_enqueue(test_util, 1);
+	osdlp_tc_pack(&tc_tx, test_util, buf, size);
+	osdlp_tc_tx_queue_enqueue(test_util, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, -TC_RX_COP_ERR);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.report_value, 1);
 
 	/* Set VS to 0 */
 
-	prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
 
 	tc_tx.cop_cfg.fop.vs = 0;	/*Inside positive window of FARM */
-	tc_pack(&tc_tx, test_util, buf, size);
-	tc_tx_queue_enqueue(test_util, 1);
+	osdlp_tc_pack(&tc_tx, test_util, buf, size);
+	osdlp_tc_tx_queue_enqueue(test_util, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
 
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	tc_rx_ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(tc_rx_ret, -TC_RX_COP_ERR);
 
-	prepare_clcw(&tc_rx, ocf);
+	osdlp_prepare_clcw(&tc_rx, ocf);
 	assert_int_equal(tc_rx.mission.clcw.report_value, 1);
 }
 

@@ -77,12 +77,12 @@ transmitter(void *vargp)
 	notification_t notif;
 	int tc_tx_ret;
 	pthread_mutex_lock(&lock);
-	notif = initiate_no_clcw(&tc_tx);
+	notif = osdlp_initiate_no_clcw(&tc_tx);
 	assert_int_equal(notif, POSITIVE_DIR);
 	pthread_mutex_unlock(&lock);
 
 	pthread_mutex_lock(&lock);
-	notif = initiate_no_clcw(&tc_tx_unseg);
+	notif = osdlp_initiate_no_clcw(&tc_tx_unseg);
 	assert_int_equal(notif, POSITIVE_DIR);
 	pthread_mutex_unlock(&lock);
 
@@ -103,7 +103,7 @@ transmitter(void *vargp)
 		    tc_tx_unseg.cop_cfg.fop.signal == POSITIVE_TX ||
 		    tc_tx_unseg.cop_cfg.fop.signal == POSITIVE_DIR) {
 			if (tc_tx_unseg.seg_status.flag == SEG_IN_PROGRESS) {
-				tc_tx_ret = tc_transmit(&tc_tx_unseg, buf, size);
+				tc_tx_ret = osdlp_tc_transmit(&tc_tx_unseg, buf, size);
 				assert_int_equal(tc_tx_ret, TC_TX_OK);
 				assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 			} else {
@@ -122,11 +122,11 @@ transmitter(void *vargp)
 				buf[1] = (size >> 8) & 0xff;
 				buf[2] = (size) & 0xff;
 				/* Prepare the frame */
-				prepare_typea_data_frame(&tc_tx_unseg, buf, size);
+				osdlp_prepare_typea_data_frame(&tc_tx_unseg, buf, size);
 
 				pthread_mutex_lock(&lock);
 				/* Transmit the frame */
-				tc_tx_ret = tc_transmit(&tc_tx_unseg, buf, size);
+				tc_tx_ret = osdlp_tc_transmit(&tc_tx_unseg, buf, size);
 
 				pthread_mutex_unlock(&lock);
 			}
@@ -173,7 +173,7 @@ transmitter(void *vargp)
 		    tc_tx.cop_cfg.fop.signal == POSITIVE_TX ||
 		    tc_tx.cop_cfg.fop.signal == POSITIVE_DIR) {
 			if (tc_tx.seg_status.flag == SEG_IN_PROGRESS) {
-				tc_tx_ret = tc_transmit(&tc_tx, buf, size);
+				tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 			} else {
 				if (packets_txed == 0) {
 					has_packets = false;
@@ -188,10 +188,10 @@ transmitter(void *vargp)
 				buf[size - 1] = (total_packets & 0xff);
 				buf[1] = (size >> 8) & 0xff;
 				buf[2] = (size) & 0xff;
-				prepare_typea_data_frame(&tc_tx, buf, size);
+				osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
 
 				pthread_mutex_lock(&lock);
-				tc_tx_ret = tc_transmit(&tc_tx, buf, size);
+				tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 				total_packets++;
 				pthread_mutex_unlock(&lock);
 			}
@@ -248,12 +248,12 @@ receiver(void *vargp)
 			ret = dequeue(&uplink_channel, test_util);
 			assert_int_equal(ret, 0);
 			/* Pass it to the receive function of the TC*/
-			tc_receive(test_util, TC_MAX_FRAME_LEN);
+			osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 			/*Respond with the clcw */
 			if (((test_util[2] >> 2) & 0x3f) == 1)
-				prepare_clcw(&tc_rx, test_util);
+				osdlp_prepare_clcw(&tc_rx, test_util);
 			else if (((test_util[2] >> 2) & 0x3f) == 0)
-				prepare_clcw(&tc_rx_unseg, test_util);
+				osdlp_prepare_clcw(&tc_rx_unseg, test_util);
 			assert_int_equal(ret, 0);
 			//clcw_pack(&clcw, test_util);
 
@@ -273,7 +273,7 @@ receiver(void *vargp)
 				/*This function must be called after an rx_queue_full event,
 				 * to notify COP that it can resume operations and reset the
 				 * wait flag */
-				buffer_release(&tc_rx);
+				osdlp_buffer_release(&tc_rx);
 			}
 			pthread_mutex_unlock(&lock);
 		} else {
@@ -303,16 +303,16 @@ clcw_listener(void *vargp)
 		if (downlink_channel.inqueue != 0) {
 
 			struct queue_item it;
-			int ret = get_first_ad_rt_frame(&it, 1);
+			int ret = osdlp_get_first_ad_rt_frame(&it, 1);
 			ret = dequeue(&downlink_channel, clcw_buf);
 			assert_int_equal(ret, 0);
-			clcw_unpack(&clcw, clcw_buf);
+			osdlp_clcw_unpack(&clcw, clcw_buf);
 			if (clcw.vcid == 0) {
 				/* This is the function that must be called whenever
 				 * a new clcw is received */
-				handle_clcw(&tc_tx_unseg, clcw_buf);
+				osdlp_handle_clcw(&tc_tx_unseg, clcw_buf);
 			} else if (clcw.vcid == 1) {
-				handle_clcw(&tc_tx, clcw_buf);
+				osdlp_handle_clcw(&tc_tx, clcw_buf);
 			}
 
 			pthread_mutex_unlock(&lock);
@@ -353,7 +353,7 @@ timer_thread(void *vargp)
 	return NULL;
 }
 int
-timer_start(uint16_t vcid)
+osdlp_timer_start(uint16_t vcid)
 {
 	pthread_mutex_lock(&tlock);
 	if (timer_running) {
@@ -367,7 +367,7 @@ timer_start(uint16_t vcid)
 }
 
 int
-timer_cancel(uint16_t vcid)
+osdlp_timer_cancel(uint16_t vcid)
 {
 	if (timer_running) {
 		kill_timer = true;
@@ -394,9 +394,9 @@ timer_handler(void *vargp)
 		if (timer_expired) {
 			/* This function must be called whenever the timer expires */
 			if (active_vcid == 0)
-				handle_timer_expired(&tc_tx_unseg);
+				osdlp_handle_timer_expired(&tc_tx_unseg);
 			else
-				handle_timer_expired(&tc_tx);
+				osdlp_handle_timer_expired(&tc_tx);
 			pthread_mutex_lock(&tlock);
 			timer_expired = false;
 			pthread_mutex_unlock(&tlock);

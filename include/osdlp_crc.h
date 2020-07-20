@@ -17,13 +17,13 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_CRC_H_
-#define INCLUDE_CRC_H_
+#ifndef INCLUDE_OSDLP_CRC_H_
+#define INCLUDE_OSDLP_CRC_H_
 
 #include <stdint.h>
 
 
 uint16_t
-calc_crc(uint8_t *data, uint32_t length);
+osdlp_calc_crc(uint8_t *data, uint32_t length);
 
-#endif /* INCLUDE_CRC_H_ */
+#endif /* INCLUDE_OSDLP_CRC_H_ */

@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "crc.h"
+#include "osdlp_crc.h"
 
 #ifndef INCLUDE_TM_H_
 #define INCLUDE_TM_H_
@@ -187,23 +187,23 @@ struct tm_transfer_frame {
  * @param util_buffer a utility buffer with size MAX_SDU_SIZE
  */
 int
-tm_init(struct tm_transfer_frame *tm_tf,
-        uint16_t spacecraft_id,
-        uint8_t *mc_count,
-        uint8_t vcid,
-        tm_ocf_flag_t ocf_flag,
-        tm_ocf_type_t ocf_type,
-        tm_sec_hdr_flag_t sec_hdr_fleg,
-        tm_sync_flag_t sync_flag,
-        uint8_t sec_hdr_len,
-        uint8_t *sec_hdr,
-        tm_crc_flag_t crc_flag,
-        uint16_t frame_size,
-        uint16_t max_sdu_len,
-        uint16_t max_vcs,
-        uint16_t max_fifo_size,
-        tm_stuff_state_t stuffing,
-        uint8_t *util_buffer);
+osdlp_tm_init(struct tm_transfer_frame *tm_tf,
+              uint16_t spacecraft_id,
+              uint8_t *mc_count,
+              uint8_t vcid,
+              tm_ocf_flag_t ocf_flag,
+              tm_ocf_type_t ocf_type,
+              tm_sec_hdr_flag_t sec_hdr_fleg,
+              tm_sync_flag_t sync_flag,
+              uint8_t sec_hdr_len,
+              uint8_t *sec_hdr,
+              tm_crc_flag_t crc_flag,
+              uint16_t frame_size,
+              uint16_t max_sdu_len,
+              uint16_t max_vcs,
+              uint16_t max_fifo_size,
+              tm_stuff_state_t stuffing,
+              uint8_t *util_buffer);
 
 /**
  * Packs a TM structure into a buffer to be transmitted
@@ -213,8 +213,8 @@ tm_init(struct tm_transfer_frame *tm_tf,
  * @param length the length of the data_in buffer
  */
 void
-tm_pack(struct tm_transfer_frame *frame_params, uint8_t *pkt_out,
-        uint8_t *data_in, uint16_t length);
+osdlp_tm_pack(struct tm_transfer_frame *frame_params, uint8_t *pkt_out,
+              uint8_t *data_in, uint16_t length);
 
 /**
  * Unpacks a received buffer and populates the corresponding fields of
@@ -223,38 +223,38 @@ tm_pack(struct tm_transfer_frame *frame_params, uint8_t *pkt_out,
  * @param pkt_in the received packet buffer
  */
 void
-tm_unpack(struct tm_transfer_frame *frame_params, uint8_t *pkt_in);
+osdlp_tm_unpack(struct tm_transfer_frame *frame_params, uint8_t *pkt_in);
 
 int
-tm_transmit(struct tm_transfer_frame *tm_tf,
-            uint8_t *data_in, uint16_t length);
+osdlp_tm_transmit(struct tm_transfer_frame *tm_tf,
+                  uint8_t *data_in, uint16_t length);
 
 int
-tm_receive(uint8_t *data_in);
+osdlp_tm_receive(uint8_t *data_in);
 
 /**
  * Transmits an FDU with idle packets only
  */
 int
-tm_transmit_idle_fdu(struct tm_transfer_frame *tm_tf, uint8_t vcid);
+osdlp_tm_transmit_idle_fdu(struct tm_transfer_frame *tm_tf, uint8_t vcid);
 
 /**
  * Aborts an ongoing segmentation procedure
  */
 void
-abort_segmentation(struct tm_transfer_frame *tm_tf);
+osdlp_abort_segmentation(struct tm_transfer_frame *tm_tf);
 
 /**
  * Disables the stuffing of packets into FDUs
  */
 void
-disable_packet_stuffing(struct tm_transfer_frame *tm_tf);
+osdlp_disable_packet_stuffing(struct tm_transfer_frame *tm_tf);
 
 /**
  * Enables the stuffing of packets into FDUs
  */
 void
-enable_packet_stuffing(struct tm_transfer_frame *tm_tf);
+osdlp_enable_packet_stuffing(struct tm_transfer_frame *tm_tf);
 
 /**
  * Checks if tx queue is empty
@@ -262,7 +262,7 @@ enable_packet_stuffing(struct tm_transfer_frame *tm_tf);
  */
 __attribute__((weak))
 bool
-tm_tx_queue_empty(uint8_t);
+osdlp_tm_tx_queue_empty(uint8_t);
 
 /**
  * Returns a pointer to the last element of the TX queue
@@ -272,7 +272,7 @@ tm_tx_queue_empty(uint8_t);
  */
 __attribute__((weak))
 int
-tm_tx_queue_back(uint8_t **, uint8_t);
+osdlp_tm_tx_queue_back(uint8_t **, uint8_t);
 
 /**
  * Notifies the caller that operations on the last element
@@ -281,7 +281,7 @@ tm_tx_queue_back(uint8_t **, uint8_t);
  */
 __attribute__((weak))
 void
-tm_tx_commit_back(uint8_t);
+osdlp_tm_tx_commit_back(uint8_t);
 
 /**
  * Puts an item at the back of the TX queue
@@ -289,7 +289,7 @@ tm_tx_commit_back(uint8_t);
  */
 __attribute__((weak))
 int
-tm_tx_queue_enqueue(uint8_t *, uint8_t);
+osdlp_tm_tx_queue_enqueue(uint8_t *, uint8_t);
 
 /**
  * Puts an item at the back of the RX queue
@@ -298,7 +298,7 @@ tm_tx_queue_enqueue(uint8_t *, uint8_t);
  */
 __attribute__((weak))
 int
-tm_rx_queue_enqueue(uint8_t *, uint8_t);
+osdlp_tm_rx_queue_enqueue(uint8_t *, uint8_t);
 
 /**
  * Returns the length of the packet pointed to by
@@ -314,8 +314,7 @@ tm_rx_queue_enqueue(uint8_t *, uint8_t);
  */
 __attribute__((weak))
 int
-tm_get_packet_len(uint16_t *, uint8_t *, uint16_t);
-
+osdlp_tm_get_packet_len(uint16_t *, uint8_t *, uint16_t);
 
 /**
  * gets the TM config corresponding to the vcid
@@ -323,6 +322,6 @@ tm_get_packet_len(uint16_t *, uint8_t *, uint16_t);
  */
 __attribute__((weak))
 int
-tm_get_rx_config(struct tm_transfer_frame **, uint8_t);
+osdlp_tm_get_rx_config(struct tm_transfer_frame **, uint8_t);
 
 #endif /* INCLUDE_TM_H_ */

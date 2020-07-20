@@ -17,7 +17,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "crc.h"
+#include "osdlp_crc.h"
 
 
 static uint16_t crc_table[256] = {
@@ -56,7 +56,7 @@ static uint16_t crc_table[256] = {
 };
 
 uint16_t
-calc_crc(uint8_t *data, uint32_t length)
+osdlp_calc_crc(uint8_t *data, uint32_t length)
 {
 	uint16_t crc = 0xffff;
 	for (uint32_t i = 0; i < length; i++) {

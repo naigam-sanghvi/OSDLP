@@ -17,32 +17,30 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "tc.h"
-#include "cop.h"
-#include "crc.h"
-#include "clcw.h"
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-
+#include "osdlp_clcw.h"
+#include "osdlp_cop.h"
+#include "osdlp_crc.h"
+#include "osdlp_tc.h"
 
 #define	TC_TRANSFER_FRAME_PRIMARY_HEADER		5
 
 int
-tc_init(struct tc_transfer_frame *tc_tf,
-        uint16_t scid,
-        uint16_t max_sdu_len,
-        uint16_t max_frame_len,
-        uint16_t rx_fifo_size,
-        uint8_t vcid,
-        uint8_t mapid,
-        tc_crc_flag_t crc_flag,
-        tc_seg_hdr_t seg_hdr_flag,
-        tc_bypass_t bypass,
-        tc_ctrl_t ctrl_cmd,
-        uint8_t *util_buffer,
-        struct cop_config cop)
+osdlp_tc_init(struct tc_transfer_frame *tc_tf,
+              uint16_t scid,
+              uint16_t max_sdu_len,
+              uint16_t max_frame_len,
+              uint16_t rx_fifo_size,
+              uint8_t vcid,
+              uint8_t mapid,
+              tc_crc_flag_t crc_flag,
+              tc_seg_hdr_t seg_hdr_flag,
+              tc_bypass_t bypass,
+              tc_ctrl_t ctrl_cmd,
+              uint8_t *util_buffer,
+              struct cop_config cop)
 {
 	if (max_frame_len <= TC_TRANSFER_FRAME_PRIMARY_HEADER) {
 		return -1;
@@ -90,7 +88,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
 }
 
 void
-tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in)
+osdlp_tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in)
 {
 	struct tc_primary_hdr tc_p_hdr;
 	tc_p_hdr.version_num    = ((pkt_in[0] >> 6) & 0x03);
@@ -123,8 +121,8 @@ tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in)
 }
 
 void
-tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
-        uint8_t *data_in, uint16_t length)
+osdlp_tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
+              uint8_t *data_in, uint16_t length)
 {
 	uint16_t crc = 0;
 	uint16_t packet_len = tc_tf->mission.fixed_overhead_len + length - 1;
@@ -154,7 +152,7 @@ tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 		memcpy(&pkt_out[5], data_in, length * sizeof(uint8_t));
 	}
 	if (tc_tf->mission.crc_flag == TC_CRC_PRESENT) {
-		crc = calc_crc(pkt_out, packet_len - 1);
+		crc = osdlp_calc_crc(pkt_out, packet_len - 1);
 		pkt_out[packet_len - 1] = (crc >> 8) & 0xff;
 		pkt_out[packet_len] = crc & 0xff;
 		tc_tf->crc = crc;
@@ -162,7 +160,8 @@ tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 }
 
 int
-frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer)
+osdlp_frame_validation_check(struct tc_transfer_frame *tc_tf,
+                             uint8_t *rx_buffer)
 {
 	if (tc_tf->mission.version_num != tc_tf->primary_hdr.version_num) {
 		return -1;
@@ -171,7 +170,7 @@ frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer)
 		return -1;
 	}
 	if (tc_tf->mission.crc_flag) {
-		uint16_t crc = calc_crc(rx_buffer, tc_tf->primary_hdr.frame_len - 1);
+		uint16_t crc = osdlp_calc_crc(rx_buffer, tc_tf->primary_hdr.frame_len - 1);
 		uint16_t rx_crc;
 		rx_crc = (rx_buffer[tc_tf->primary_hdr.frame_len - 1] & 0xff) << 8;
 		rx_crc |= (rx_buffer[tc_tf->primary_hdr.frame_len] & 0xff);
@@ -183,7 +182,7 @@ frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer)
 }
 
 int
-tc_receive(uint8_t *rx_buffer, uint32_t length)
+osdlp_tc_receive(uint8_t *rx_buffer, uint32_t length)
 {
 	int ret;
 	farm_result_t farm_ret;
@@ -197,20 +196,20 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 	/* Frame Validation Checks */
 	uint8_t vcid = ((rx_buffer[2] >> 2) & 0x3f);
 	struct tc_transfer_frame *tc_tf;
-	ret = tc_get_rx_config(&tc_tf, vcid);
+	ret = osdlp_tc_get_rx_config(&tc_tf, vcid);
 	if (ret < 0) {
 		return -TC_RX_CONFIG_ERR;
 	}
 
-	tc_unpack(tc_tf, rx_buffer);
+	osdlp_tc_unpack(tc_tf, rx_buffer);
 
-	ret = frame_validation_check(tc_tf, rx_buffer);
+	ret = osdlp_frame_validation_check(tc_tf, rx_buffer);
 	if (ret) {
 		return -TC_RX_FRAME_VAL_ERR;
 	}
 
 	/* Perform FARM-1 */
-	farm_ret = farm_1(tc_tf);
+	farm_ret = osdlp_farm_1(tc_tf);
 	if (farm_ret == COP_ENQ || farm_ret == COP_PRIORITY_ENQ) {
 		/* Handle segmentation */
 		if (tc_tf->mission.seg_hdr_flag) {
@@ -223,9 +222,9 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					if (farm_ret == COP_ENQ) {
-						ret = tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+						ret = osdlp_tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
 					} else {
-						ret = tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+						ret = osdlp_tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 					}
 					tc_tf->mission.util.buffered_length = 0;
 					tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
@@ -265,9 +264,9 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					if (farm_ret == COP_ENQ) {
-						ret = tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+						ret = osdlp_tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
 					} else {
-						ret = tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+						ret = osdlp_tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 					}
 					tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 					if (ret < 0) {
@@ -304,9 +303,9 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 			       tc_tf->frame_data.data,
 			       tc_tf->frame_data.data_len * sizeof(uint8_t));
 			if (farm_ret == COP_ENQ) {
-				ret = tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+				ret = osdlp_tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
 			} else {
-				ret = tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+				ret = osdlp_tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
 			}
 			tc_tf->mission.util.buffered_length = 0;
 			tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
@@ -329,7 +328,8 @@ tc_receive(uint8_t *rx_buffer, uint32_t length)
 }
 
 int
-tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
+osdlp_tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                  uint32_t length)
 {
 	uint16_t remaining = length;
 	uint16_t bytes_avail = 0;
@@ -364,8 +364,8 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 		tc_tf->frame_data.data_len = bytes_avail;
 		tc_tf->frame_data.data = buffer + (length - remaining);
 
-		if (!tc_tx_queue_full(tc_tf->primary_hdr.vcid)) {
-			notif = req_transfer_fdu(tc_tf);
+		if (!osdlp_tc_tx_queue_full(tc_tf->primary_hdr.vcid)) {
+			notif = osdlp_req_transfer_fdu(tc_tf);
 		} else {
 			tc_tf->cop_cfg.fop.signal = REJECT_TX;
 			return -TC_TX_COP_ERR;
@@ -414,8 +414,8 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length)
 }
 
 void
-prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                         uint16_t len)
+osdlp_prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                               uint16_t len)
 {
 	tc_tf->primary_hdr.bypass = TYPE_A;
 	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
@@ -424,8 +424,8 @@ prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
 }
 
 void
-prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                         uint16_t len)
+osdlp_prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                               uint16_t len)
 {
 	tc_tf->primary_hdr.bypass = TYPE_B;
 	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
@@ -434,7 +434,7 @@ prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
 }
 
 void
-prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr)
+osdlp_prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr)
 {
 	tc_tf->primary_hdr.bypass = TYPE_B;
 	tc_tf->primary_hdr.ctrl_cmd = TC_COMMAND;
@@ -445,7 +445,7 @@ prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr)
 }
 
 void
-prepare_typeb_unlock(struct tc_transfer_frame *tc_tf)
+osdlp_prepare_typeb_unlock(struct tc_transfer_frame *tc_tf)
 {
 	tc_tf->primary_hdr.bypass = TYPE_B;
 	tc_tf->primary_hdr.ctrl_cmd = TC_COMMAND;
@@ -455,7 +455,7 @@ prepare_typeb_unlock(struct tc_transfer_frame *tc_tf)
 }
 
 void
-prepare_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf)
+osdlp_prepare_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf)
 {
 	tc_tf->mission.clcw.ctrl_word_type = 0; // TM_OCF_TYPE_1
 	tc_tf->mission.clcw.cop_in_effect = 1;
@@ -466,5 +466,5 @@ prepare_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf)
 	tc_tf->mission.clcw.report_value = tc_tf->cop_cfg.farm.vr;
 	tc_tf->mission.clcw.vcid = tc_tf->mission.vcid;
 	tc_tf->mission.clcw.clcw_version_num = 0;
-	clcw_pack(&tc_tf->mission.clcw, ocf);
+	osdlp_clcw_pack(&tc_tf->mission.clcw, ocf);
 }

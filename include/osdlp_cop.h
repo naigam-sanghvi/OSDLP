@@ -17,12 +17,12 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_COP_H_
-#define INCLUDE_COP_H_
+#ifndef INCLUDE_OSDLP_COP_H_
+#define INCLUDE_OSDLP_COP_H_
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "tc.h"
+#include "osdlp_tc.h"
 
 #define UNLOCK_CMD      0
 #define SETVR_BYTE1     0x82
@@ -87,9 +87,9 @@ struct farm_vars {
  * @param tx_lim the frame retransmission limit
  */
 void
-prepare_fop(struct fop_config *fop, uint16_t slide_wnd,
-            fop_state_t state, uint16_t t1_init, uint8_t timeout_type,
-            uint8_t tx_lim);
+osdlp_prepare_fop(struct fop_config *fop, uint16_t slide_wnd,
+                  fop_state_t state, uint16_t t1_init, uint8_t timeout_type,
+                  uint8_t tx_lim);
 
 /**
  * Prepares the FARM config struct
@@ -98,145 +98,145 @@ prepare_fop(struct fop_config *fop, uint16_t slide_wnd,
  * @param window_width the window width
  */
 void
-prepare_farm(struct farm_config *farm, farm_state_t state,
-             uint8_t window_width);
+osdlp_prepare_farm(struct farm_config *farm, farm_state_t state,
+                   uint8_t window_width);
 
 int
-initialize_cop(struct tc_transfer_frame *tc_tf);
+osdlp_initialize_cop(struct tc_transfer_frame *tc_tf);
 
 int
-alert(struct tc_transfer_frame *tc_tf);
+osdlp_alert(struct tc_transfer_frame *tc_tf);
 
 int
-resume(struct tc_transfer_frame *tc_tf);
+osdlp_resume(struct tc_transfer_frame *tc_tf);
 
 int
-reset_accept(struct tc_transfer_frame *tc_tf);
+osdlp_reset_accept(struct tc_transfer_frame *tc_tf);
 
 farm_result_t
-farm_1(struct tc_transfer_frame *tc_tf);
+osdlp_farm_1(struct tc_transfer_frame *tc_tf);
 
 void
-set_lockout(struct farm_config *farm_cfg);
+osdlp_set_lockout(struct farm_config *farm_cfg);
 
 void
-reset_lockout(struct farm_config *farm_cfg);
+osdlp_reset_lockout(struct farm_config *farm_cfg);
 
 void
-set_wait(struct farm_config *farm_cfg);
+osdlp_set_wait(struct farm_config *farm_cfg);
 
 void
-reset_wait(struct tc_transfer_frame *tc_tf);
+osdlp_reset_wait(struct tc_transfer_frame *tc_tf);
 
 void
-buffer_release(struct tc_transfer_frame *tc_tf);
+osdlp_buffer_release(struct tc_transfer_frame *tc_tf);
 
 void
-set_retransmit(struct farm_config *farm_cfg);
+osdlp_set_retransmit(struct farm_config *farm_cfg);
 
 void
-reset_retransmit(struct farm_config *farm_cfg);
+osdlp_reset_retransmit(struct farm_config *farm_cfg);
 
 int
-fop_1(struct tc_transfer_frame *tc_tf);
+osdlp_fop_1(struct tc_transfer_frame *tc_tf);
 
 int
-purge_sent_queue(struct tc_transfer_frame *tc_tf);
+osdlp_purge_sent_queue(struct tc_transfer_frame *tc_tf);
 
 int
-purge_wait_queue(struct tc_transfer_frame *tc_tf);
+osdlp_purge_wait_queue(struct tc_transfer_frame *tc_tf);
 
 notification_t
-look_for_fdu(struct tc_transfer_frame *tc_tf);
+osdlp_look_for_fdu(struct tc_transfer_frame *tc_tf);
 
 int
-transmit_type_ad(struct tc_transfer_frame *tc_tf);
+osdlp_transmit_type_ad(struct tc_transfer_frame *tc_tf);
 
 int
-transmit_type_bc(struct tc_transfer_frame *tc_tf);
+osdlp_transmit_type_bc(struct tc_transfer_frame *tc_tf);
 
 int
-transmit_type_bd(struct tc_transfer_frame *tc_tf);
+osdlp_transmit_type_bd(struct tc_transfer_frame *tc_tf);
 
 int
-initiate_ad_retransmission(struct tc_transfer_frame *tc_tf);
+osdlp_initiate_ad_retransmission(struct tc_transfer_frame *tc_tf);
 
 int
-initiate_bc_retransmission(struct tc_transfer_frame *tc_tf);
+osdlp_initiate_bc_retransmission(struct tc_transfer_frame *tc_tf);
 
 int
-remove_acked_frames(struct tc_transfer_frame *tc_tf, uint8_t nr);
+osdlp_remove_acked_frames(struct tc_transfer_frame *tc_tf, uint8_t nr);
 
 notification_t
-look_for_directive(struct tc_transfer_frame *tc_tf);
+osdlp_look_for_directive(struct tc_transfer_frame *tc_tf);
 
 notification_t
-handle_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf_buffer);
+osdlp_handle_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf_buffer);
 
 notification_t
-handle_timer_expired(struct tc_transfer_frame *tc_tf);
+osdlp_handle_timer_expired(struct tc_transfer_frame *tc_tf);
 
 notification_t
-req_transfer_fdu(struct tc_transfer_frame *tc_tf);
+osdlp_req_transfer_fdu(struct tc_transfer_frame *tc_tf);
 
 int
-release_copy_of_bc(struct tc_transfer_frame *tc_tf);
+osdlp_release_copy_of_bc(struct tc_transfer_frame *tc_tf);
 
 
 /* Directives from management */
 
 notification_t
-initiate_no_clcw(struct tc_transfer_frame *tc_tf);
+osdlp_initiate_no_clcw(struct tc_transfer_frame *tc_tf);
 
 notification_t
-initiate_with_clcw(struct tc_transfer_frame *tc_tf);
+osdlp_initiate_with_clcw(struct tc_transfer_frame *tc_tf);
 
 notification_t
-initiate_with_unlock(struct tc_transfer_frame *tc_tf);
+osdlp_initiate_with_unlock(struct tc_transfer_frame *tc_tf);
 
 notification_t
-initiate_with_setvr(struct tc_transfer_frame *tc_tf, uint8_t new_vr);
+osdlp_initiate_with_setvr(struct tc_transfer_frame *tc_tf, uint8_t new_vr);
 
 notification_t
-terminate_ad(struct tc_transfer_frame *tc_tf);
+osdlp_terminate_ad(struct tc_transfer_frame *tc_tf);
 
 notification_t
-resume_ad(struct tc_transfer_frame *tc_tf);
+osdlp_resume_ad(struct tc_transfer_frame *tc_tf);
 
 notification_t
-set_new_vs(struct tc_transfer_frame *tc_tf, uint8_t new_vs);
+osdlp_set_new_vs(struct tc_transfer_frame *tc_tf, uint8_t new_vs);
 
 notification_t
-set_sliding_window(struct tc_transfer_frame *tc_tf, uint8_t new_wnd);
+osdlp_set_sliding_window(struct tc_transfer_frame *tc_tf, uint8_t new_wnd);
 
 notification_t
-set_timer(struct tc_transfer_frame *tc_tf, uint16_t new_t1);
+osdlp_set_timer(struct tc_transfer_frame *tc_tf, uint16_t new_t1);
 
 notification_t
-set_tx_limit(struct tc_transfer_frame *tc_tf, uint8_t new_lim);
+osdlp_set_tx_limit(struct tc_transfer_frame *tc_tf, uint8_t new_lim);
 
 notification_t
-set_tt(struct tc_transfer_frame *tc_tf, uint8_t new_tt);
+osdlp_set_tt(struct tc_transfer_frame *tc_tf, uint8_t new_tt);
 
 /* Responses from lower layers */
 
 notification_t
-ad_accept(struct tc_transfer_frame *tc_tf);
+osdlp_ad_accept(struct tc_transfer_frame *tc_tf);
 
 notification_t
-ad_reject(struct tc_transfer_frame *tc_tf);
+osdlp_ad_reject(struct tc_transfer_frame *tc_tf);
 
 notification_t
-bc_accept(struct tc_transfer_frame *tc_tf);
+osdlp_bc_accept(struct tc_transfer_frame *tc_tf);
 
 notification_t
-bc_reject(struct tc_transfer_frame *tc_tf);
+osdlp_bc_reject(struct tc_transfer_frame *tc_tf);
 
 notification_t
-bd_accept(struct tc_transfer_frame *tc_tf);
+osdlp_bd_accept(struct tc_transfer_frame *tc_tf);
 
 notification_t
-bd_reject(struct tc_transfer_frame *tc_tf);
+osdlp_bd_reject(struct tc_transfer_frame *tc_tf);
 
 
 /* Queue API */
@@ -249,7 +249,7 @@ bd_reject(struct tc_transfer_frame *tc_tf);
  */
 __attribute__((weak))
 int
-tc_wait_queue_enqueue(void *, uint16_t);
+osdlp_tc_wait_queue_enqueue(void *, uint16_t);
 
 /**
  * Dequeues an item from the wait queue
@@ -259,7 +259,7 @@ tc_wait_queue_enqueue(void *, uint16_t);
  */
 __attribute__((weak))
 int
-tc_wait_queue_dequeue(void *, uint16_t);
+osdlp_tc_wait_queue_dequeue(void *, uint16_t);
 
 /**
  * Returns if the wait queue is empty
@@ -269,7 +269,7 @@ tc_wait_queue_dequeue(void *, uint16_t);
  */
 __attribute__((weak))
 bool
-tc_wait_queue_empty(uint16_t);
+osdlp_tc_wait_queue_empty(uint16_t);
 
 /**
  * Clears the wait queue
@@ -278,7 +278,7 @@ tc_wait_queue_empty(uint16_t);
  */
 __attribute__((weak))
 int
-tc_wait_queue_clear(uint16_t);
+osdlp_tc_wait_queue_clear(uint16_t);
 
 /**
  * Enqueues an item on the sent queue
@@ -288,7 +288,7 @@ tc_wait_queue_clear(uint16_t);
  */
 __attribute__((weak))
 int
-tc_sent_queue_enqueue(struct queue_item *, uint16_t);
+osdlp_tc_sent_queue_enqueue(struct queue_item *, uint16_t);
 
 
 /**
@@ -299,7 +299,7 @@ tc_sent_queue_enqueue(struct queue_item *, uint16_t);
  */
 __attribute__((weak))
 int
-tc_sent_queue_dequeue(struct queue_item *, uint16_t);
+osdlp_tc_sent_queue_dequeue(struct queue_item *, uint16_t);
 
 /**
  * Returns if the sent queue is empty
@@ -307,7 +307,7 @@ tc_sent_queue_dequeue(struct queue_item *, uint16_t);
  */
 __attribute__((weak))
 bool
-tc_sent_queue_empty(uint16_t);
+osdlp_tc_sent_queue_empty(uint16_t);
 
 /**
  * Clears the sent queue
@@ -316,7 +316,7 @@ tc_sent_queue_empty(uint16_t);
  */
 __attribute__((weak))
 int
-tc_sent_queue_clear(uint16_t);
+osdlp_tc_sent_queue_clear(uint16_t);
 
 /**
  * Returns a pointer to the head of the sent
@@ -327,7 +327,7 @@ tc_sent_queue_clear(uint16_t);
  */
 __attribute__((weak))
 int
-tc_sent_queue_head(struct queue_item *, uint16_t);
+osdlp_tc_sent_queue_head(struct queue_item *, uint16_t);
 
 
 /**
@@ -336,7 +336,7 @@ tc_sent_queue_head(struct queue_item *, uint16_t);
  */
 __attribute__((weak))
 bool
-tc_rx_queue_full(uint16_t);
+osdlp_tc_rx_queue_full(uint16_t);
 
 /**
  * Checks if tx queue is full
@@ -344,7 +344,7 @@ tc_rx_queue_full(uint16_t);
  */
 __attribute__((weak))
 bool
-tc_tx_queue_full();
+osdlp_tc_tx_queue_full();
 
 /**
  * Enqueues an item on the tx queue.
@@ -356,7 +356,7 @@ tc_tx_queue_full();
  */
 __attribute__((weak))
 int
-tc_tx_queue_enqueue(uint8_t *, uint16_t);
+osdlp_tc_tx_queue_enqueue(uint8_t *, uint16_t);
 
 /**
  * Starts the timer
@@ -365,7 +365,7 @@ tc_tx_queue_enqueue(uint8_t *, uint16_t);
  */
 __attribute__((weak))
 int
-timer_start(uint16_t);
+osdlp_timer_start(uint16_t);
 
 /**
  * Stops the timer
@@ -374,7 +374,7 @@ timer_start(uint16_t);
  */
 __attribute__((weak))
 int
-timer_cancel(uint16_t);
+osdlp_timer_cancel(uint16_t);
 
 /**
  * Cancels any ongoing operations on the
@@ -385,7 +385,7 @@ timer_cancel(uint16_t);
  */
 __attribute__((weak))
 int
-cancel_lower_ops();
+osdlp_cancel_lower_ops();
 
 /**
  * Marks all type_A queue_item structs on the
@@ -395,7 +395,7 @@ cancel_lower_ops();
  */
 __attribute__((weak))
 int
-mark_ad_as_rt(uint16_t);
+osdlp_mark_ad_as_rt(uint16_t);
 
 /**
  * Marks the type_B queue_item struct on the
@@ -405,7 +405,7 @@ mark_ad_as_rt(uint16_t);
  */
 __attribute__((weak))
 int
-mark_bc_as_rt(uint16_t);
+osdlp_mark_bc_as_rt(uint16_t);
 
 /**
  * Resets the flag of the passed queue_item on
@@ -416,7 +416,7 @@ mark_bc_as_rt(uint16_t);
  */
 __attribute__((weak))
 int
-reset_rt_frame(struct queue_item *, uint16_t);
+osdlp_reset_rt_frame(struct queue_item *, uint16_t);
 
 /**
  * Fetches the first frame on the sent queue
@@ -427,6 +427,6 @@ reset_rt_frame(struct queue_item *, uint16_t);
  */
 __attribute__((weak))
 int
-get_first_ad_rt_frame(struct queue_item *, uint16_t);
+osdlp_get_first_ad_rt_frame(struct queue_item *, uint16_t);
 
-#endif /* INCLUDE_COP_H_ */
+#endif /* INCLUDE_OSDLP_COP_H_ */

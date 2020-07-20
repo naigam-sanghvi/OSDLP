@@ -17,12 +17,12 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "cop.h"
+#include "osdlp_cop.h"
 #include "osdlp.h"
 
 void
-prepare_fop(struct fop_config *fop, uint16_t slide_wnd, fop_state_t state,
-            uint16_t t1_init, uint8_t timeout_type, uint8_t tx_lim)
+osdlp_prepare_fop(struct fop_config *fop, uint16_t slide_wnd, fop_state_t state,
+                  uint16_t t1_init, uint8_t timeout_type, uint8_t tx_lim)
 {
 	fop->nnr = 0;
 	fop->slide_wnd = slide_wnd;
@@ -37,8 +37,8 @@ prepare_fop(struct fop_config *fop, uint16_t slide_wnd, fop_state_t state,
 }
 
 void
-prepare_farm(struct farm_config *farm, farm_state_t state,
-             uint8_t window_width)
+osdlp_prepare_farm(struct farm_config *farm, farm_state_t state,
+                   uint8_t window_width)
 {
 	farm->state = state;
 	farm->pw = window_width / 2;
@@ -47,13 +47,13 @@ prepare_farm(struct farm_config *farm, farm_state_t state,
 }
 
 void
-buffer_release(struct tc_transfer_frame *tc_tf)
+osdlp_buffer_release(struct tc_transfer_frame *tc_tf)
 {
-	reset_wait(tc_tf);
+	osdlp_reset_wait(tc_tf);
 }
 
 void
-reset_wait(struct tc_transfer_frame *tc_tf)
+osdlp_reset_wait(struct tc_transfer_frame *tc_tf)
 {
 	tc_tf->cop_cfg.farm.wait = CLCW_DO_NOT_WAIT;
 	tc_tf->cop_cfg.farm.state = FARM_STATE_OPEN;
@@ -255,7 +255,7 @@ handle_farm_typea(struct tc_transfer_frame *tc_tf)
 	farm_result_t ret;
 	if (tc_tf->primary_hdr.frame_seq_num == tc_tf->cop_cfg.farm.vr) {
 		/*E1*/
-		if (!tc_rx_queue_full(tc_tf->primary_hdr.vcid)) {
+		if (!osdlp_tc_rx_queue_full(tc_tf->primary_hdr.vcid)) {
 			ret = farm_e1(tc_tf);
 			return ret;
 		}
@@ -312,7 +312,7 @@ handle_farm_typeb_data(struct tc_transfer_frame *tc_tf)
 }
 
 farm_result_t
-farm_1(struct tc_transfer_frame *tc_tf)
+osdlp_farm_1(struct tc_transfer_frame *tc_tf)
 {
 	farm_result_t ret;
 	if (tc_tf->primary_hdr.bypass == TYPE_A) {
@@ -336,14 +336,14 @@ farm_1(struct tc_transfer_frame *tc_tf)
 }
 
 int
-initialize_cop(struct tc_transfer_frame *tc_tf)
+osdlp_initialize_cop(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	ret = purge_wait_queue(tc_tf);
+	ret = osdlp_purge_wait_queue(tc_tf);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = purge_sent_queue(tc_tf);
+	ret = osdlp_purge_sent_queue(tc_tf);
 	if (ret < 0) {
 		return -1;
 	}
@@ -353,18 +353,18 @@ initialize_cop(struct tc_transfer_frame *tc_tf)
 }
 
 int
-alert(struct tc_transfer_frame *tc_tf)
+osdlp_alert(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	ret = timer_cancel(tc_tf->primary_hdr.vcid);
+	ret = osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = purge_wait_queue(tc_tf);
+	ret = osdlp_purge_wait_queue(tc_tf);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = purge_sent_queue(tc_tf);
+	ret = osdlp_purge_sent_queue(tc_tf);
 	if (ret < 0) {
 		return -1;
 	}
@@ -374,9 +374,9 @@ alert(struct tc_transfer_frame *tc_tf)
 }
 
 int
-resume(struct tc_transfer_frame *tc_tf)
+osdlp_resume(struct tc_transfer_frame *tc_tf)
 {
-	int ret = timer_start(tc_tf->primary_hdr.vcid);
+	int ret = osdlp_timer_start(tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -393,18 +393,18 @@ condition_fop_inwindow(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-look_for_fdu(struct tc_transfer_frame *tc_tf)
+osdlp_look_for_fdu(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	if (!tc_sent_queue_empty(tc_tf->primary_hdr.vcid)) {
+	if (!osdlp_tc_sent_queue_empty(tc_tf->primary_hdr.vcid)) {
 		struct queue_item item;
-		ret = get_first_ad_rt_frame(&item, tc_tf->primary_hdr.vcid);
+		ret = osdlp_get_first_ad_rt_frame(&item, tc_tf->primary_hdr.vcid);
 		if (ret >= 0) {
-			ret = reset_rt_frame(&item, tc_tf->primary_hdr.vcid);
+			ret = osdlp_reset_rt_frame(&item, tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return UNDEF_ERROR;
 			}
-			ret = tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -413,10 +413,10 @@ look_for_fdu(struct tc_transfer_frame *tc_tf)
 	}
 	/*Perform checks in case window wraps around*/
 
-	if (!tc_wait_queue_empty(tc_tf->primary_hdr.vcid)) {
+	if (!osdlp_tc_wait_queue_empty(tc_tf->primary_hdr.vcid)) {
 		if (tc_tf->cop_cfg.fop.nnr + tc_tf->cop_cfg.fop.slide_wnd >= 256) {
 			if (condition_fop_inwindow(tc_tf)) {
-				ret = transmit_type_ad(tc_tf);
+				ret = osdlp_transmit_type_ad(tc_tf);
 				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
@@ -430,7 +430,7 @@ look_for_fdu(struct tc_transfer_frame *tc_tf)
 		} else {
 			if (tc_tf->cop_cfg.fop.vs
 			    < tc_tf->cop_cfg.fop.nnr + tc_tf->cop_cfg.fop.slide_wnd) {
-				ret = transmit_type_ad(tc_tf);
+				ret = osdlp_transmit_type_ad(tc_tf);
 				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
@@ -450,25 +450,25 @@ look_for_fdu(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-look_for_directive(struct tc_transfer_frame *tc_tf)
+osdlp_look_for_directive(struct tc_transfer_frame *tc_tf)
 {
 	notification_t notif;
 	int ret;
 	struct queue_item item;
-	ret = tc_sent_queue_head(&item,
-	                         tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_sent_queue_head(&item,
+	                               tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 		return UNDEF_ERROR;
 	}
 	if (item.rt_flag == RT_FLAG_ON && item.type == TYPE_B) {
 		item.rt_flag = RT_FLAG_OFF;
-		ret = tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
+		ret = osdlp_tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
 		if (ret < 0) {
-			notif = bc_reject(tc_tf);
+			notif = osdlp_bc_reject(tc_tf);
 			return notif;
 		} else {
-			notif = bc_accept(tc_tf);
+			notif = osdlp_bc_accept(tc_tf);
 			return notif;
 		}
 	}
@@ -476,32 +476,33 @@ look_for_directive(struct tc_transfer_frame *tc_tf)
 }
 
 int
-transmit_type_ad(struct tc_transfer_frame *tc_tf)
+osdlp_transmit_type_ad(struct tc_transfer_frame *tc_tf)
 {
 	struct queue_item item;
 	struct tc_transfer_frame wait_item;
-	int ret = tc_wait_queue_dequeue(&wait_item, tc_tf->primary_hdr.vcid);
+	int ret = osdlp_tc_wait_queue_dequeue(&wait_item, tc_tf->primary_hdr.vcid);
 
-	tc_pack(tc_tf, tc_tf->mission.util.buffer, wait_item.frame_data.data,
-	        wait_item.frame_data.data_len);
+	osdlp_tc_pack(tc_tf, tc_tf->mission.util.buffer, wait_item.frame_data.data,
+	              wait_item.frame_data.data_len);
 
-	if (tc_sent_queue_empty(tc_tf->primary_hdr.vcid)) {
+	if (osdlp_tc_sent_queue_empty(tc_tf->primary_hdr.vcid)) {
 		tc_tf->cop_cfg.fop.tx_cnt = 1;
 	}
-	timer_start(tc_tf->primary_hdr.vcid);
+	osdlp_timer_start(tc_tf->primary_hdr.vcid);
 
 	item.type = TYPE_A;
 	item.fdu = tc_tf->mission.util.buffer;
 	item.rt_flag = RT_FLAG_OFF;
 	item.seq_num = tc_tf->cop_cfg.fop.vs;
-	ret = tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
 	tc_tf->cop_cfg.fop.vs = (tc_tf->cop_cfg.fop.vs + 1) % 256;
 
 	if (ret < 0) {
 		return -1;
 	}
 
-	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_tx_queue_enqueue(tc_tf->mission.util.buffer,
+	                                tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -509,26 +510,27 @@ transmit_type_ad(struct tc_transfer_frame *tc_tf)
 }
 
 int
-transmit_type_bc(struct tc_transfer_frame *tc_tf)
+osdlp_transmit_type_bc(struct tc_transfer_frame *tc_tf)
 {
 	struct queue_item item;
 	int ret;
-	tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
-	        tc_tf->frame_data.data_len);
+	osdlp_tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
+	              tc_tf->frame_data.data_len);
 	tc_tf->cop_cfg.fop.tx_cnt = 1;
 	tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len +
 	                               tc_tf->frame_data.data_len - 1;
-	timer_start(tc_tf->primary_hdr.vcid);
+	osdlp_timer_start(tc_tf->primary_hdr.vcid);
 	item.type = TYPE_B;
 	item.fdu = tc_tf->mission.util.buffer;
 	item.rt_flag = RT_FLAG_OFF;
 	item.seq_num = tc_tf->cop_cfg.fop.vs;
-	ret = tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
 
-	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_tx_queue_enqueue(tc_tf->mission.util.buffer,
+	                                tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -536,15 +538,16 @@ transmit_type_bc(struct tc_transfer_frame *tc_tf)
 }
 
 int
-transmit_type_bd(struct tc_transfer_frame *tc_tf)
+osdlp_transmit_type_bd(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
-	        tc_tf->frame_data.data_len);
+	osdlp_tc_pack(tc_tf, tc_tf->mission.util.buffer, tc_tf->frame_data.data,
+	              tc_tf->frame_data.data_len);
 	//Set BD_Out not ready
 	tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len +
 	                               tc_tf->frame_data.data_len - 1;
-	ret = tc_tx_queue_enqueue(tc_tf->mission.util.buffer, tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_tx_queue_enqueue(tc_tf->mission.util.buffer,
+	                                tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -552,16 +555,16 @@ transmit_type_bd(struct tc_transfer_frame *tc_tf)
 }
 
 int
-initiate_ad_retransmission(struct tc_transfer_frame *tc_tf)
+osdlp_initiate_ad_retransmission(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	cancel_lower_ops();
+	osdlp_cancel_lower_ops();
 	tc_tf->cop_cfg.fop.tx_cnt = (tc_tf->cop_cfg.fop.tx_cnt + 1) % 256;
-	ret = timer_start(tc_tf->primary_hdr.vcid);
+	ret = osdlp_timer_start(tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = mark_ad_as_rt(tc_tf->primary_hdr.vcid);
+	ret = osdlp_mark_ad_as_rt(tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -569,16 +572,16 @@ initiate_ad_retransmission(struct tc_transfer_frame *tc_tf)
 }
 
 int
-initiate_bc_retransmission(struct tc_transfer_frame *tc_tf)
+osdlp_initiate_bc_retransmission(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	cancel_lower_ops();
+	osdlp_cancel_lower_ops();
 	tc_tf->cop_cfg.fop.tx_cnt = (tc_tf->cop_cfg.fop.tx_cnt + 1) % 256;
-	ret = timer_start(tc_tf->primary_hdr.vcid);
+	ret = osdlp_timer_start(tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = mark_bc_as_rt(tc_tf->primary_hdr.vcid);
+	ret = osdlp_mark_bc_as_rt(tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -586,9 +589,9 @@ initiate_bc_retransmission(struct tc_transfer_frame *tc_tf)
 }
 
 int
-purge_sent_queue(struct tc_transfer_frame *tc_tf)
+osdlp_purge_sent_queue(struct tc_transfer_frame *tc_tf)
 {
-	int ret = tc_sent_queue_clear(tc_tf->primary_hdr.vcid);
+	int ret = osdlp_tc_sent_queue_clear(tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -596,9 +599,9 @@ purge_sent_queue(struct tc_transfer_frame *tc_tf)
 }
 
 int
-purge_wait_queue(struct tc_transfer_frame *tc_tf)
+osdlp_purge_wait_queue(struct tc_transfer_frame *tc_tf)
 {
-	int ret = tc_wait_queue_clear(tc_tf->primary_hdr.vcid);
+	int ret = osdlp_tc_wait_queue_clear(tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -606,18 +609,18 @@ purge_wait_queue(struct tc_transfer_frame *tc_tf)
 }
 
 int
-remove_acked_frames(struct tc_transfer_frame *tc_tf, uint8_t nr)
+osdlp_remove_acked_frames(struct tc_transfer_frame *tc_tf, uint8_t nr)
 {
 	struct queue_item item;
 	int ret;
 	uint16_t counter = 0;
 	while (1) {
-		ret = tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
+		ret = osdlp_tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
 		if (ret < 0) {
 			break;
 		}
 		if (item.seq_num != nr) {
-			ret = tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return -1;
 			}
@@ -635,17 +638,17 @@ remove_acked_frames(struct tc_transfer_frame *tc_tf, uint8_t nr)
 }
 
 int
-release_copy_of_bc(struct tc_transfer_frame *tc_tf)
+osdlp_release_copy_of_bc(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	struct queue_item item;
-	ret = tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
 	/* Check that item in head is TYPE B*/
 	if ((item.type == TYPE_B)) {
-		ret = tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
+		ret = osdlp_tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
 		if (ret < 0) {
 			return -1;
 		}
@@ -663,7 +666,7 @@ fop_e1(struct tc_transfer_frame *tc_tf)
 			return IGNORE;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -673,7 +676,7 @@ fop_e1(struct tc_transfer_frame *tc_tf)
 			return ALERT_SYNCH;
 		case FOP_STATE_RT_WAIT:
 			// Alert;
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -683,17 +686,17 @@ fop_e1(struct tc_transfer_frame *tc_tf)
 			return ALERT_SYNCH;
 		case FOP_STATE_INIT_NO_BC:
 			tc_tf->cop_cfg.fop.state = FOP_STATE_ACTIVE;
-			timer_cancel(tc_tf->primary_hdr.vcid);
+			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
 			tc_tf->cop_cfg.fop.signal = POSITIVE_DIR;
 			return POSITIVE_DIR;
 		case FOP_STATE_INIT_BC:
-			ret = release_copy_of_bc(tc_tf);
+			ret = osdlp_release_copy_of_bc(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			tc_tf->cop_cfg.fop.state = FOP_STATE_ACTIVE;
-			timer_cancel(tc_tf->primary_hdr.vcid);
+			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
 			tc_tf->cop_cfg.fop.signal = POSITIVE_DIR;
 			return POSITIVE_DIR;
 		case FOP_STATE_INIT:
@@ -713,14 +716,14 @@ fop_e2(struct tc_transfer_frame *tc_tf,
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			timer_cancel(tc_tf->primary_hdr.vcid);
-			notif = look_for_fdu(tc_tf);
+			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -728,14 +731,14 @@ fop_e2(struct tc_transfer_frame *tc_tf,
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			timer_cancel(tc_tf->primary_hdr.vcid);
-			notif = look_for_fdu(tc_tf);
+			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -743,14 +746,14 @@ fop_e2(struct tc_transfer_frame *tc_tf,
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_WAIT:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			timer_cancel(tc_tf->primary_hdr.vcid);
-			notif = look_for_fdu(tc_tf);
+			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -780,7 +783,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -790,7 +793,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 			return ALERT_CLCW;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -800,7 +803,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 			return ALERT_CLCW;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -810,7 +813,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 			return ALERT_CLCW;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -820,7 +823,7 @@ fop_e3(struct tc_transfer_frame *tc_tf,
 			return ALERT_CLCW;
 		case FOP_STATE_INIT_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -845,7 +848,7 @@ fop_e4(struct tc_transfer_frame *tc_tf,
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -855,7 +858,7 @@ fop_e4(struct tc_transfer_frame *tc_tf,
 			return ALERT_SYNCH;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -865,7 +868,7 @@ fop_e4(struct tc_transfer_frame *tc_tf,
 			return ALERT_SYNCH;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -875,7 +878,7 @@ fop_e4(struct tc_transfer_frame *tc_tf,
 			return ALERT_SYNCH;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -907,7 +910,7 @@ fop_e5(struct tc_transfer_frame *tc_tf,
 			return IGNORE;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -917,7 +920,7 @@ fop_e5(struct tc_transfer_frame *tc_tf,
 			return ALERT_SYNCH;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -948,13 +951,13 @@ fop_e6(struct tc_transfer_frame *tc_tf,
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -962,14 +965,14 @@ fop_e6(struct tc_transfer_frame *tc_tf,
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			tc_tf->cop_cfg.fop.state = FOP_STATE_ACTIVE;
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -977,13 +980,13 @@ fop_e6(struct tc_transfer_frame *tc_tf,
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_WAIT:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			tc_tf->cop_cfg.fop.state = FOP_STATE_ACTIVE;
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
@@ -1014,7 +1017,7 @@ fop_e7(struct tc_transfer_frame *tc_tf,
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1024,7 +1027,7 @@ fop_e7(struct tc_transfer_frame *tc_tf,
 			return ALERT_CLCW;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1034,7 +1037,7 @@ fop_e7(struct tc_transfer_frame *tc_tf,
 			return ALERT_CLCW;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1064,14 +1067,14 @@ fop_e101(struct tc_transfer_frame *tc_tf,
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1080,14 +1083,14 @@ fop_e101(struct tc_transfer_frame *tc_tf,
 			tc_tf->cop_cfg.fop.signal = ALERT_LIMIT;
 			return ALERT_LIMIT;
 		case FOP_STATE_RT_NO_WAIT:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1096,9 +1099,9 @@ fop_e101(struct tc_transfer_frame *tc_tf,
 			tc_tf->cop_cfg.fop.signal = ALERT_LIMIT;
 			return ALERT_LIMIT;
 		case FOP_STATE_RT_WAIT:
-			remove_acked_frames(tc_tf, clcw->report_value);
+			osdlp_remove_acked_frames(tc_tf, clcw->report_value);
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1129,7 +1132,7 @@ fop_e102(struct tc_transfer_frame *tc_tf,
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1139,7 +1142,7 @@ fop_e102(struct tc_transfer_frame *tc_tf,
 			return ALERT_LIMIT;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1149,7 +1152,7 @@ fop_e102(struct tc_transfer_frame *tc_tf,
 			return ALERT_LIMIT;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1180,18 +1183,18 @@ fop_e8(struct tc_transfer_frame *tc_tf,
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			ret = initiate_ad_retransmission(tc_tf);
+			ret = osdlp_initiate_ad_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			tc_tf->cop_cfg.fop.state = FOP_STATE_RT_NO_WAIT;
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
@@ -1200,18 +1203,18 @@ fop_e8(struct tc_transfer_frame *tc_tf,
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			ret = initiate_ad_retransmission(tc_tf);
+			ret = osdlp_initiate_ad_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -1219,18 +1222,18 @@ fop_e8(struct tc_transfer_frame *tc_tf,
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_WAIT:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			ret = initiate_ad_retransmission(tc_tf);
+			ret = osdlp_initiate_ad_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			tc_tf->cop_cfg.fop.state = FOP_STATE_RT_NO_WAIT;
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
@@ -1260,8 +1263,8 @@ fop_e9(struct tc_transfer_frame *tc_tf,
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1269,8 +1272,8 @@ fop_e9(struct tc_transfer_frame *tc_tf,
 			tc_tf->cop_cfg.fop.state = FOP_STATE_RT_WAIT;
 			return IGNORE;
 		case FOP_STATE_RT_NO_WAIT:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1278,8 +1281,8 @@ fop_e9(struct tc_transfer_frame *tc_tf,
 			tc_tf->cop_cfg.fop.state = FOP_STATE_RT_WAIT;
 			return IGNORE;
 		case FOP_STATE_RT_WAIT:
-			ret = remove_acked_frames(tc_tf,
-			                          clcw->report_value);
+			ret = osdlp_remove_acked_frames(tc_tf,
+			                                clcw->report_value);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1309,12 +1312,12 @@ fop_e10(struct tc_transfer_frame *tc_tf,
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = initiate_ad_retransmission(tc_tf);
+			ret = osdlp_initiate_ad_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			tc_tf->cop_cfg.fop.state =
 			        FOP_STATE_RT_NO_WAIT;
 			if (!(notif == IGNORE)) {
@@ -1327,12 +1330,12 @@ fop_e10(struct tc_transfer_frame *tc_tf,
 			// Ignore
 			return IGNORE;
 		case FOP_STATE_RT_WAIT:
-			ret = initiate_ad_retransmission(tc_tf);
+			ret = osdlp_initiate_ad_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			tc_tf->cop_cfg.fop.state =
 			        FOP_STATE_RT_NO_WAIT;
 			if (!(notif == IGNORE)) {
@@ -1463,7 +1466,7 @@ fop_e13(struct tc_transfer_frame *tc_tf,
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1473,7 +1476,7 @@ fop_e13(struct tc_transfer_frame *tc_tf,
 			return ALERT_NNR;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1483,7 +1486,7 @@ fop_e13(struct tc_transfer_frame *tc_tf,
 			return ALERT_NNR;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1493,7 +1496,7 @@ fop_e13(struct tc_transfer_frame *tc_tf,
 			return ALERT_NNR;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1521,7 +1524,7 @@ fop_e14(struct tc_transfer_frame *tc_tf,
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1531,7 +1534,7 @@ fop_e14(struct tc_transfer_frame *tc_tf,
 			return ALERT_LOCKOUT;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1541,7 +1544,7 @@ fop_e14(struct tc_transfer_frame *tc_tf,
 			return ALERT_LOCKOUT;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1551,7 +1554,7 @@ fop_e14(struct tc_transfer_frame *tc_tf,
 			return ALERT_LOCKOUT;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1578,12 +1581,12 @@ fop_e16(struct tc_transfer_frame *tc_tf)
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = initiate_ad_retransmission(tc_tf);
+			ret = osdlp_initiate_ad_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -1591,12 +1594,12 @@ fop_e16(struct tc_transfer_frame *tc_tf)
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			ret = initiate_ad_retransmission(tc_tf);
+			ret = osdlp_initiate_ad_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -1608,7 +1611,7 @@ fop_e16(struct tc_transfer_frame *tc_tf)
 			return IGNORE;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1617,12 +1620,12 @@ fop_e16(struct tc_transfer_frame *tc_tf)
 			tc_tf->cop_cfg.fop.signal = ALERT_T1;
 			return ALERT_T1;
 		case FOP_STATE_INIT_BC:
-			ret = initiate_bc_retransmission(tc_tf);
+			ret = osdlp_initiate_bc_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_directive(tc_tf);
+			notif = osdlp_look_for_directive(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -1645,12 +1648,12 @@ fop_e104(struct tc_transfer_frame *tc_tf)
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = initiate_ad_retransmission(tc_tf);
+			ret = osdlp_initiate_ad_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -1658,12 +1661,12 @@ fop_e104(struct tc_transfer_frame *tc_tf)
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			ret = initiate_ad_retransmission(tc_tf);
+			ret = osdlp_initiate_ad_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -1679,12 +1682,12 @@ fop_e104(struct tc_transfer_frame *tc_tf)
 			tc_tf->cop_cfg.fop.state = FOP_STATE_INIT;
 			return SUSPEND;
 		case FOP_STATE_INIT_BC:
-			ret = initiate_bc_retransmission(tc_tf);
+			ret = osdlp_initiate_bc_retransmission(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_directive(tc_tf);
+			notif = osdlp_look_for_directive(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -1707,7 +1710,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1717,7 +1720,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 			return ALERT_T1;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1727,7 +1730,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 			return ALERT_T1;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1737,7 +1740,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 			return ALERT_T1;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1747,7 +1750,7 @@ fop_e17(struct tc_transfer_frame *tc_tf)
 			return ALERT_T1;
 		case FOP_STATE_INIT_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1791,7 +1794,7 @@ fop_e18(struct tc_transfer_frame *tc_tf)
 			return SUSPEND;
 		case FOP_STATE_INIT_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1815,12 +1818,12 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -1828,12 +1831,12 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			ret = tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -1841,7 +1844,7 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_WAIT:
-			ret = tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1906,7 +1909,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = transmit_type_bd(tc_tf);
+			ret = osdlp_transmit_type_bd(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
@@ -1915,7 +1918,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 				return ACCEPT_TX;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			ret = transmit_type_bd(tc_tf);
+			ret = osdlp_transmit_type_bd(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
@@ -1924,7 +1927,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 				return ACCEPT_TX;
 			}
 		case FOP_STATE_RT_WAIT:
-			ret = transmit_type_bd(tc_tf);
+			ret = osdlp_transmit_type_bd(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
@@ -1933,7 +1936,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 				return ACCEPT_TX;
 			}
 		case FOP_STATE_INIT_NO_BC:
-			ret = transmit_type_bd(tc_tf);
+			ret = osdlp_transmit_type_bd(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
@@ -1942,7 +1945,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 				return ACCEPT_TX;
 			}
 		case FOP_STATE_INIT_BC:
-			ret = transmit_type_bd(tc_tf);
+			ret = osdlp_transmit_type_bd(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
@@ -1951,7 +1954,7 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 				return ACCEPT_TX;
 			}
 		case FOP_STATE_INIT:
-			ret = transmit_type_bd(tc_tf);
+			ret = osdlp_transmit_type_bd(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = REJECT_TX;
 				return REJECT_TX;
@@ -1966,10 +1969,10 @@ fop_e21(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-handle_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf_buffer)
+osdlp_handle_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf_buffer)
 {
 	notification_t notif;
-	clcw_unpack(&tc_tf->mission.clcw, ocf_buffer);
+	osdlp_clcw_unpack(&tc_tf->mission.clcw, ocf_buffer);
 	if (tc_tf->mission.clcw.lockout == CLCW_NO_LOCKOUT) {
 		if (tc_tf->cop_cfg.fop.vs == tc_tf->mission.clcw.report_value) {
 			if (tc_tf->mission.clcw.rt == CLCW_NO_RETRANSMIT) {
@@ -2085,7 +2088,7 @@ handle_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf_buffer)
 }
 
 notification_t
-handle_timer_expired(struct tc_transfer_frame *tc_tf)
+osdlp_handle_timer_expired(struct tc_transfer_frame *tc_tf)
 {
 	notification_t notif;
 	if (tc_tf->cop_cfg.fop.tx_cnt < tc_tf->cop_cfg.fop.tx_lim) {
@@ -2118,11 +2121,11 @@ handle_timer_expired(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-req_transfer_fdu(struct tc_transfer_frame *tc_tf)
+osdlp_req_transfer_fdu(struct tc_transfer_frame *tc_tf)
 {
 	notification_t notif;
 	if (tc_tf->primary_hdr.bypass == TYPE_A) {
-		if (tc_wait_queue_empty(tc_tf->primary_hdr.vcid)) {
+		if (osdlp_tc_wait_queue_empty(tc_tf->primary_hdr.vcid)) {
 			/*E19*/
 			notif = fop_e19(tc_tf);
 			return notif;
@@ -2143,7 +2146,7 @@ req_transfer_fdu(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-initiate_no_clcw(struct tc_transfer_frame *tc_tf)
+osdlp_initiate_no_clcw(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	/*E23*/
@@ -2170,7 +2173,7 @@ initiate_no_clcw(struct tc_transfer_frame *tc_tf)
 			return REJECT_DIR;
 		case FOP_STATE_INIT:
 			// accept();
-			ret = initialize_cop(tc_tf);
+			ret = osdlp_initialize_cop(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2186,7 +2189,7 @@ initiate_no_clcw(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-initiate_with_clcw(struct tc_transfer_frame *tc_tf)
+osdlp_initiate_with_clcw(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	/*E24*/
@@ -2212,12 +2215,12 @@ initiate_with_clcw(struct tc_transfer_frame *tc_tf)
 			tc_tf->cop_cfg.fop.signal = REJECT_DIR;
 			return REJECT_DIR;
 		case FOP_STATE_INIT:
-			ret = initialize_cop(tc_tf);
+			ret = osdlp_initialize_cop(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			timer_start(tc_tf->primary_hdr.vcid);
+			osdlp_timer_start(tc_tf->primary_hdr.vcid);
 			tc_tf->cop_cfg.fop.state = FOP_STATE_INIT_NO_BC;
 			tc_tf->cop_cfg.fop.signal = ACCEPT_DIR;
 			return ACCEPT_DIR;
@@ -2228,7 +2231,7 @@ initiate_with_clcw(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-initiate_with_unlock(struct tc_transfer_frame *tc_tf)
+osdlp_initiate_with_unlock(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	/*E25*/
@@ -2249,13 +2252,13 @@ initiate_with_unlock(struct tc_transfer_frame *tc_tf)
 			// Reject
 			return REJECT_DIR;
 		case FOP_STATE_INIT:
-			ret = initialize_cop(tc_tf);
+			ret = osdlp_initialize_cop(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			prepare_typeb_unlock(tc_tf);
-			ret = transmit_type_bc(tc_tf); // Unlock
+			osdlp_prepare_typeb_unlock(tc_tf);
+			ret = osdlp_transmit_type_bc(tc_tf); // Unlock
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2270,8 +2273,8 @@ initiate_with_unlock(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-initiate_with_setvr(struct tc_transfer_frame *tc_tf,
-                    uint8_t new_vr)
+osdlp_initiate_with_setvr(struct tc_transfer_frame *tc_tf,
+                          uint8_t new_vr)
 {
 	int ret;
 	/*E27*/
@@ -2292,15 +2295,15 @@ initiate_with_setvr(struct tc_transfer_frame *tc_tf,
 			// Reject
 			return REJECT_DIR;
 		case FOP_STATE_INIT:
-			ret = initialize_cop(tc_tf);
+			ret = osdlp_initialize_cop(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
 			tc_tf->cop_cfg.fop.vs = new_vr;
 			tc_tf->cop_cfg.fop.nnr = new_vr;
-			prepare_typeb_setvr(tc_tf, new_vr);
-			ret = transmit_type_bc(tc_tf); // Set V(R)
+			osdlp_prepare_typeb_setvr(tc_tf, new_vr);
+			ret = osdlp_transmit_type_bc(tc_tf); // Set V(R)
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2315,14 +2318,14 @@ initiate_with_setvr(struct tc_transfer_frame *tc_tf,
 }
 
 notification_t
-terminate_ad(struct tc_transfer_frame *tc_tf)
+osdlp_terminate_ad(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	/*E29*/
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2333,7 +2336,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 			return POSITIVE_DIR;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2344,7 +2347,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 			return POSITIVE_DIR;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2355,7 +2358,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 			return POSITIVE_DIR;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2366,7 +2369,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 			return POSITIVE_DIR;
 		case FOP_STATE_INIT_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2386,7 +2389,7 @@ terminate_ad(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-resume_ad(struct tc_transfer_frame *tc_tf)
+osdlp_resume_ad(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	/*E30*/
@@ -2432,7 +2435,7 @@ resume_ad(struct tc_transfer_frame *tc_tf)
 				// NA
 				return NA;
 			case FOP_STATE_INIT:
-				ret = resume(tc_tf);
+				ret = osdlp_resume(tc_tf);
 				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
@@ -2464,7 +2467,7 @@ resume_ad(struct tc_transfer_frame *tc_tf)
 				// NA
 				return NA;
 			case FOP_STATE_INIT:
-				ret = resume(tc_tf);
+				ret = osdlp_resume(tc_tf);
 				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
@@ -2496,7 +2499,7 @@ resume_ad(struct tc_transfer_frame *tc_tf)
 				// NA
 				return NA;
 			case FOP_STATE_INIT:
-				ret = resume(tc_tf);
+				ret = osdlp_resume(tc_tf);
 				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
@@ -2528,7 +2531,7 @@ resume_ad(struct tc_transfer_frame *tc_tf)
 				// NA
 				return NA;
 			case FOP_STATE_INIT:
-				ret = resume(tc_tf);
+				ret = osdlp_resume(tc_tf);
 				if (ret < 0) {
 					tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 					return UNDEF_ERROR;
@@ -2548,7 +2551,7 @@ resume_ad(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-set_new_vs(struct tc_transfer_frame *tc_tf, uint8_t new_vs)
+osdlp_set_new_vs(struct tc_transfer_frame *tc_tf, uint8_t new_vs)
 {
 	/*E35*/
 	switch (tc_tf->cop_cfg.fop.state) {
@@ -2585,8 +2588,8 @@ set_new_vs(struct tc_transfer_frame *tc_tf, uint8_t new_vs)
 }
 
 notification_t
-set_sliding_window(struct tc_transfer_frame *tc_tf,
-                   uint8_t new_wnd)
+osdlp_set_sliding_window(struct tc_transfer_frame *tc_tf,
+                         uint8_t new_wnd)
 {
 	/*E36*/
 	switch (tc_tf->cop_cfg.fop.state) {
@@ -2627,7 +2630,7 @@ set_sliding_window(struct tc_transfer_frame *tc_tf,
 }
 
 notification_t
-set_timer(struct tc_transfer_frame *tc_tf, uint16_t new_t1)
+osdlp_set_timer(struct tc_transfer_frame *tc_tf, uint16_t new_t1)
 {
 	/*E37*/
 	switch (tc_tf->cop_cfg.fop.state) {
@@ -2668,7 +2671,7 @@ set_timer(struct tc_transfer_frame *tc_tf, uint16_t new_t1)
 }
 
 notification_t
-set_tx_limit(struct tc_transfer_frame *tc_tf, uint8_t new_lim)
+osdlp_set_tx_limit(struct tc_transfer_frame *tc_tf, uint8_t new_lim)
 {
 	/*E38*/
 	switch (tc_tf->cop_cfg.fop.state) {
@@ -2709,7 +2712,7 @@ set_tx_limit(struct tc_transfer_frame *tc_tf, uint8_t new_lim)
 }
 
 notification_t
-set_tt(struct tc_transfer_frame *tc_tf, uint8_t new_tt)
+osdlp_set_tt(struct tc_transfer_frame *tc_tf, uint8_t new_tt)
 {
 	/*E38*/
 	switch (tc_tf->cop_cfg.fop.state) {
@@ -2750,13 +2753,13 @@ set_tt(struct tc_transfer_frame *tc_tf, uint8_t new_tt)
 }
 
 notification_t
-ad_accept(struct tc_transfer_frame *tc_tf)
+osdlp_ad_accept(struct tc_transfer_frame *tc_tf)
 {
 	notification_t notif;
 	/*E41*/
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -2764,7 +2767,7 @@ ad_accept(struct tc_transfer_frame *tc_tf)
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			notif = look_for_fdu(tc_tf);
+			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -2786,14 +2789,14 @@ ad_accept(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-ad_reject(struct tc_transfer_frame *tc_tf)
+osdlp_ad_reject(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	/*E42*/
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2803,7 +2806,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2813,7 +2816,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2823,7 +2826,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2833,7 +2836,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_INIT_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2843,7 +2846,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_INIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2857,7 +2860,7 @@ ad_reject(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-bc_accept(struct tc_transfer_frame *tc_tf)
+osdlp_bc_accept(struct tc_transfer_frame *tc_tf)
 {
 	notification_t notif;
 	/*E43*/
@@ -2871,7 +2874,7 @@ bc_accept(struct tc_transfer_frame *tc_tf)
 		case FOP_STATE_INIT_NO_BC:
 			return IGNORE;
 		case FOP_STATE_INIT_BC:
-			notif = look_for_directive(tc_tf);
+			notif = osdlp_look_for_directive(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
 				return notif;
@@ -2887,14 +2890,14 @@ bc_accept(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-bc_reject(struct tc_transfer_frame *tc_tf)
+osdlp_bc_reject(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	/*E44*/
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2904,7 +2907,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2914,7 +2917,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2924,7 +2927,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2934,7 +2937,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_INIT_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2944,7 +2947,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_INIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2958,7 +2961,7 @@ bc_reject(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-bd_accept(struct tc_transfer_frame *tc_tf)
+osdlp_bd_accept(struct tc_transfer_frame *tc_tf)
 {
 	/*E45*/
 	switch (tc_tf->cop_cfg.fop.state) {
@@ -2987,14 +2990,14 @@ bd_accept(struct tc_transfer_frame *tc_tf)
 }
 
 notification_t
-bd_reject(struct tc_transfer_frame *tc_tf)
+osdlp_bd_reject(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	/*E46*/
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -3004,7 +3007,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_RT_NO_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -3014,7 +3017,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_RT_WAIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -3024,7 +3027,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_INIT_NO_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -3034,7 +3037,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_INIT_BC:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -3044,7 +3047,7 @@ bd_reject(struct tc_transfer_frame *tc_tf)
 			return ALERT_LLIF;
 		case FOP_STATE_INIT:
 			// Alert
-			ret = alert(tc_tf);
+			ret = osdlp_alert(tc_tf);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;

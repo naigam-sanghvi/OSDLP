@@ -58,47 +58,47 @@ struct tm_transfer_frame   tm_rx;
 struct queue  	           tx_queues[NUMVCS];     /* TM TX queues */
 
 uint16_t
-tc_wait_queue_size(uint16_t vcid)
+osdlp_tc_wait_queue_size(uint16_t vcid)
 {
 	return wait_queues[vcid].inqueue;
 }
 
 int
-tc_wait_queue_enqueue(void *tc_tf, uint16_t vcid)
+osdlp_tc_wait_queue_enqueue(void *tc_tf, uint16_t vcid)
 {
 	int ret = enqueue(&wait_queues[vcid], tc_tf);
 	return ret;
 }
 
 int
-tc_wait_queue_dequeue(void *tc_tf, uint16_t vcid)
+osdlp_tc_wait_queue_dequeue(void *tc_tf, uint16_t vcid)
 {
 	int ret = dequeue(&wait_queues[vcid], tc_tf);
 	return ret;
 }
 
 bool
-tc_wait_queue_empty(uint16_t vcid)
+osdlp_tc_wait_queue_empty(uint16_t vcid)
 {
 	return wait_queues[vcid].inqueue == 0 ? true : false;
 }
 
 int
-tc_wait_queue_clear(uint16_t vcid)
+osdlp_tc_wait_queue_clear(uint16_t vcid)
 {
 	int ret = reset_queue(&wait_queues[vcid]);
 	return ret;
 }
 
 int
-tc_tx_queue_clear()
+osdlp_tc_tx_queue_clear()
 {
 	int ret = reset_queue(&uplink_channel);
 	return ret;
 }
 
 int
-tc_sent_queue_clear(uint16_t vcid)
+osdlp_tc_sent_queue_clear(uint16_t vcid)
 {
 	int ret = reset_queue(&sent_queues[vcid]);
 	return ret;
@@ -111,7 +111,7 @@ tc_sent_queue_size(uint16_t vcid)
 }
 
 int
-tc_sent_queue_dequeue(struct queue_item *qi, uint16_t vcid)
+osdlp_tc_sent_queue_dequeue(struct queue_item *qi, uint16_t vcid)
 {
 	struct local_queue_item new_item;
 	int ret = dequeue(&sent_queues[vcid], &new_item);
@@ -123,7 +123,7 @@ tc_sent_queue_dequeue(struct queue_item *qi, uint16_t vcid)
 }
 
 int
-tc_sent_queue_enqueue(struct queue_item *qi, uint16_t vcid)
+osdlp_tc_sent_queue_enqueue(struct queue_item *qi, uint16_t vcid)
 {
 	uint16_t frame_len = (((qi->fdu[2] & 0x03) << 8) | qi->fdu[3]);
 	struct local_queue_item new_item;
@@ -136,19 +136,19 @@ tc_sent_queue_enqueue(struct queue_item *qi, uint16_t vcid)
 }
 
 bool
-tc_sent_queue_empty(uint16_t vcid)
+osdlp_tc_sent_queue_empty(uint16_t vcid)
 {
 	return sent_queues[vcid].inqueue == 0 ? true : false;
 }
 
 bool
-tc_sent_queue_full(uint16_t vcid)
+osdlp_tc_sent_queue_full(uint16_t vcid)
 {
 	return sent_queues[vcid].inqueue == sent_queues[vcid].capacity ? true : false;
 }
 
 int
-tc_sent_queue_head(struct queue_item *qi, uint16_t vcid)
+osdlp_tc_sent_queue_head(struct queue_item *qi, uint16_t vcid)
 {
 	struct local_queue_item *item;
 	if (sent_queues[vcid].inqueue > 0) {
@@ -165,7 +165,7 @@ tc_sent_queue_head(struct queue_item *qi, uint16_t vcid)
 }
 
 struct tc_transfer_frame *
-tc_get_tx_config(uint16_t vcid)
+osdlp_tc_get_tx_config(uint16_t vcid)
 {
 	if (vcid == 1) {
 		return &tc_tx;
@@ -178,60 +178,60 @@ tc_get_tx_config(uint16_t vcid)
 
 
 bool
-tc_rx_queue_full(uint16_t vcid)
+osdlp_tc_rx_queue_full(uint16_t vcid)
 {
 	return rx_queues[vcid].inqueue == rx_queues[vcid].capacity ? true : false;
 }
 
 bool
-tc_tx_queue_full()
+osdlp_tc_tx_queue_full()
 {
 	return uplink_channel.inqueue == uplink_channel.capacity ? true : false;
 }
 
 int
-tc_tx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
+osdlp_tc_tx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
 {
 	struct tc_transfer_frame *tc;
-	tc = (struct tc_transfer_frame *)tc_get_tx_config(vcid);
+	tc = (struct tc_transfer_frame *)osdlp_tc_get_tx_config(vcid);
 	int ret = enqueue(&uplink_channel, buffer);
 	if ((buffer[0] >> 5) & 0x01) {   // Type B
 		if ((buffer[0] >> 4) & 0x01) { // Control
 			if (ret < 0) {
-				bc_reject(tc);
+				osdlp_bc_reject(tc);
 			} else {
-				bc_accept(tc);
+				osdlp_bc_accept(tc);
 			}
 		} else {						// Data
 			if (ret < 0) {
-				bd_reject(tc);
+				osdlp_bd_reject(tc);
 			} else {
-				bd_accept(tc);
+				osdlp_bd_accept(tc);
 			}
 		}
 	} else { // Type A
 		if (ret < 0) {
-			ad_reject(tc);
+			osdlp_ad_reject(tc);
 		} else {
-			ad_accept(tc);
+			osdlp_ad_accept(tc);
 		}
 	}
 	return ret;
 }
 
 int
-tc_rx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
+osdlp_tc_rx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
 {
 	int ret = enqueue(&rx_queues[vcid], buffer);
 	return ret;
 }
 
 int
-tc_rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
+osdlp_tc_rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
 {
 	int ret = enqueue(&rx_queues[vcid], buffer);
 	if (ret < 0) {
-		if (tc_rx_queue_full(vcid)) {
+		if (osdlp_tc_rx_queue_full(vcid)) {
 			ret = enqueue_now(&rx_queues[vcid], buffer);
 			return 0;
 		}
@@ -242,7 +242,7 @@ tc_rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
 }
 
 int
-tc_get_rx_config(struct tc_transfer_frame **tf, uint16_t vcid)
+osdlp_tc_get_rx_config(struct tc_transfer_frame **tf, uint16_t vcid)
 {
 	if (vcid == 1) {
 		*tf = &tc_rx;
@@ -256,14 +256,14 @@ tc_get_rx_config(struct tc_transfer_frame **tf, uint16_t vcid)
 }
 
 int
-cancel_lower_ops()
+osdlp_cancel_lower_ops()
 {
-	int ret = tc_tx_queue_clear();
+	int ret = osdlp_tc_tx_queue_clear();
 	return ret;
 }
 
 int
-mark_ad_as_rt(uint16_t vcid)
+osdlp_mark_ad_as_rt(uint16_t vcid)
 {
 	struct local_queue_item *item;
 	for (int i = 0; i < sent_queues[vcid].inqueue; i++) {
@@ -279,7 +279,7 @@ mark_ad_as_rt(uint16_t vcid)
 }
 
 int
-get_first_ad_rt_frame(struct queue_item *qi, uint16_t vcid)
+osdlp_get_first_ad_rt_frame(struct queue_item *qi, uint16_t vcid)
 {
 	struct local_queue_item *item;
 	for (int i = 0; i < sent_queues[vcid].inqueue; i++) {
@@ -299,7 +299,7 @@ get_first_ad_rt_frame(struct queue_item *qi, uint16_t vcid)
 }
 
 int
-reset_rt_frame(struct queue_item *qi, uint16_t vcid)
+osdlp_reset_rt_frame(struct queue_item *qi, uint16_t vcid)
 {
 	struct local_queue_item *item;
 	for (int i = 0; i < sent_queues[vcid].inqueue; i++) {
@@ -316,7 +316,7 @@ reset_rt_frame(struct queue_item *qi, uint16_t vcid)
 }
 
 int
-mark_bc_as_rt(uint16_t vcid)
+osdlp_mark_bc_as_rt(uint16_t vcid)
 {
 	struct queue_item *item;
 	item = (struct queue_item *)front(&sent_queues[vcid]);
@@ -398,21 +398,21 @@ setup_tc_configs(struct tc_transfer_frame *tc_tx,
                  uint8_t farm_wnd_width)
 {
 	int ret;
-	prepare_fop(fop, fop_slide_wnd,
-	            fop_init_st, fop_t1_init,
-	            fop_timeout_type, fop_tx_limit);
+	osdlp_prepare_fop(fop, fop_slide_wnd,
+	                  fop_init_st, fop_t1_init,
+	                  fop_timeout_type, fop_tx_limit);
 	memcpy(&fop_conf->fop, fop, sizeof(struct fop_config));
 	//cop_tx.fop = fop;
-	ret = tc_init(tc_tx, scid, TC_MAX_SDU_SIZE,
-	              max_frame_size, max_fifo_size, vcid, mapid, crc,
-	              seg_hdr, bypass, ctrl, util_tx, *fop_conf);
+	ret = osdlp_tc_init(tc_tx, scid, TC_MAX_SDU_SIZE,
+	                    max_frame_size, max_fifo_size, vcid, mapid, crc,
+	                    seg_hdr, bypass, ctrl, util_tx, *fop_conf);
 	assert_int_not_equal(ret, -1);
-	prepare_farm(farm, farm_init_st, farm_wnd_width);
+	osdlp_prepare_farm(farm, farm_init_st, farm_wnd_width);
 	memcpy(&farm_conf->farm, farm, sizeof(struct farm_config));
 	//farm_conf.farm = farm;
-	ret = tc_init(tc_rx, scid, TC_MAX_SDU_SIZE,
-	              max_frame_size, max_fifo_size, vcid, mapid, crc,
-	              seg_hdr, bypass, ctrl, util_rx, *farm_conf);
+	ret = osdlp_tc_init(tc_rx, scid, TC_MAX_SDU_SIZE,
+	                    max_frame_size, max_fifo_size, vcid, mapid, crc,
+	                    seg_hdr, bypass, ctrl, util_rx, *farm_conf);
 	assert_int_not_equal(ret, -1);
 	return 0;
 }

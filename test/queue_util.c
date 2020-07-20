@@ -20,8 +20,8 @@
 #include <queue_util.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tc.h>
-#include <cop.h>
+#include <osdlp_tc.h>
+#include <osdlp_cop.h>
 
 int
 init(struct queue *handle,

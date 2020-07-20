@@ -22,7 +22,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "clcw.h"
+
+#include "osdlp_clcw.h"
 
 #define TC_VERSION_NUMBER           0
 #define UNLOCK_CMD                  0
@@ -225,19 +226,19 @@ struct tc_transfer_frame {
 };
 
 int
-tc_init(struct tc_transfer_frame *tc_tf,
-        uint16_t scid,
-        uint16_t max_fdu_len,
-        uint16_t max_frame_len,
-        uint16_t rx_fifo_len,
-        uint8_t vcid,
-        uint8_t mapid,
-        tc_crc_flag_t crc_flag,
-        tc_seg_hdr_t seg_hdr_flag,
-        tc_bypass_t bypass,
-        tc_ctrl_t ctrl_cmd,
-        uint8_t *util_buffer,
-        struct cop_config cop);
+osdlp_tc_init(struct tc_transfer_frame *tc_tf,
+              uint16_t scid,
+              uint16_t max_fdu_len,
+              uint16_t max_frame_len,
+              uint16_t rx_fifo_len,
+              uint8_t vcid,
+              uint8_t mapid,
+              tc_crc_flag_t crc_flag,
+              tc_seg_hdr_t seg_hdr_flag,
+              tc_bypass_t bypass,
+              tc_ctrl_t ctrl_cmd,
+              uint8_t *util_buffer,
+              struct cop_config cop);
 /**
  * Unpacks a received buffer and populates the corresponding fields of
  * a TC config structure
@@ -245,7 +246,7 @@ tc_init(struct tc_transfer_frame *tc_tf,
  * @param pkt_in the received packet buffer
  */
 void
-tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in);
+osdlp_tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in);
 
 /**
  * Packs a TC structure into a buffer to be transmitted
@@ -255,28 +256,29 @@ tc_unpack(struct tc_transfer_frame *tc_tf,  uint8_t *pkt_in);
  * @param length the length of the data_in buffer
  */
 void
-tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
-        uint8_t *data_in, uint16_t length);
+osdlp_tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
+              uint8_t *data_in, uint16_t length);
 
 void
-prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                         uint16_t len);
+osdlp_prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                               uint16_t len);
 
 void
-prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                         uint16_t len);
+osdlp_prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                               uint16_t len);
 
 void
-prepare_typeb_unlock(struct tc_transfer_frame *tc_tf);
+osdlp_prepare_typeb_unlock(struct tc_transfer_frame *tc_tf);
 
 void
-prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr);
+osdlp_prepare_typeb_setvr(struct tc_transfer_frame *tc_tf, uint8_t vr);
 
 void
-prepare_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf);
+osdlp_prepare_clcw(struct tc_transfer_frame *tc_tf, uint8_t *ocf);
 
 int
-frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer);
+osdlp_frame_validation_check(struct tc_transfer_frame *tc_tf,
+                             uint8_t *rx_buffer);
 
 /* Performs TC receive with COP
  *
@@ -287,7 +289,7 @@ frame_validation_check(struct tc_transfer_frame *tc_tf, uint8_t *rx_buffer);
  *
  */
 int
-tc_receive(uint8_t *rx_buffer, uint32_t length);
+osdlp_tc_receive(uint8_t *rx_buffer, uint32_t length);
 
 
 /* Performs TC transmit with COP
@@ -300,7 +302,8 @@ tc_receive(uint8_t *rx_buffer, uint32_t length);
  *
  */
 int
-tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length);
+osdlp_tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
+                  uint32_t length);
 
 /**
  * Returns the configuration struct for the specific vcid
@@ -312,7 +315,7 @@ tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer, uint32_t length);
  */
 __attribute__((weak))
 int
-tc_get_rx_config(struct tc_transfer_frame **, uint16_t);
+osdlp_tc_get_rx_config(struct tc_transfer_frame **, uint16_t);
 
 /**
  * Enqueues an item on the rx queue
@@ -323,7 +326,7 @@ tc_get_rx_config(struct tc_transfer_frame **, uint16_t);
  */
 __attribute__((weak))
 int
-tc_rx_queue_enqueue(uint8_t *, uint16_t);
+osdlp_tc_rx_queue_enqueue(uint8_t *, uint16_t);
 
 /**
  * Enqueues an item on the rx queue even
@@ -336,6 +339,6 @@ tc_rx_queue_enqueue(uint8_t *, uint16_t);
  */
 __attribute__((weak))
 int
-tc_rx_queue_enqueue_now(uint8_t *, uint8_t);
+osdlp_tc_rx_queue_enqueue_now(uint8_t *, uint8_t);
 
 #endif /* INCLUDE_TC_H_ */

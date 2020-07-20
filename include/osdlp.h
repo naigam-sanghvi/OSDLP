@@ -20,10 +20,10 @@
 #ifndef INCLUDE_OSDLP_H_
 #define INCLUDE_OSDLP_H_
 
-#include "tc.h"
-#include "tm.h"
-#include "crc.h"
-#include "cop.h"
+#include "osdlp_tc.h"
+#include "osdlp_cop.h"
+#include "osdlp_crc.h"
+#include "osdlp_tm.h"
 
 
 #endif /* INCLUDE_OSDLP_H_ */

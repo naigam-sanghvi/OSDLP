@@ -38,24 +38,24 @@ test_tm(void **state)
 	uint16_t frame_len 	= 300;
 	uint8_t maxvcs 		= 2;
 	uint16_t maxfifo 	= 10;
-	int ret = tm_init(&tm_tx, scid,
-	                  &cnt, vcid, ocf, 0,
-	                  0, 0, 0, NULL, crc,
-	                  frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
-	                  TM_STUFFING_OFF, util);
+	int ret = osdlp_tm_init(&tm_tx, scid,
+	                        &cnt, vcid, ocf, 0,
+	                        0, 0, 0, NULL, crc,
+	                        frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
+	                        TM_STUFFING_OFF, util);
 	assert_int_equal(0, ret);
 
-	ret = tm_init(&tm_rx, 0,
-	              &cnt, 0, 0, 0, 0, 0,
-	              0, NULL, crc,
-	              frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
-	              TM_STUFFING_OFF, util);
+	ret = osdlp_tm_init(&tm_rx, 0,
+	                    &cnt, 0, 0, 0, 0, 0,
+	                    0, NULL, crc,
+	                    frame_len, TM_MAX_SDU_LEN, maxvcs, maxfifo,
+	                    TM_STUFFING_OFF, util);
 	assert_int_equal(0, ret);
 
 
-	tm_pack(&tm_tx, tx_buf, data, 100);
+	osdlp_tm_pack(&tm_tx, tx_buf, data, 100);
 
-	tm_unpack(&tm_rx, tx_buf);
+	osdlp_tm_unpack(&tm_rx, tx_buf);
 
 	assert_int_equal(tm_tx.primary_hdr.ocf, tm_rx.primary_hdr.ocf);
 	assert_int_equal(tm_tx.primary_hdr.mcid.spacecraft_id,
@@ -86,26 +86,26 @@ test_tc(void **state)
 	tc_bypass_t bypass 		= TYPE_A;
 	tc_ctrl_t ctrl_cmd 		= TC_DATA;
 	uint16_t rx_max_fifo_size = 10;
-	int ret = tc_init(&tc_tx,
-	                  scid, max_sdu_size, max_fdu_size,
-	                  rx_max_fifo_size,
-	                  vcid, mapid, crc,
-	                  seg, bypass, ctrl_cmd,
-	                  util, cop);
+	int ret = osdlp_tc_init(&tc_tx,
+	                        scid, max_sdu_size, max_fdu_size,
+	                        rx_max_fifo_size,
+	                        vcid, mapid, crc,
+	                        seg, bypass, ctrl_cmd,
+	                        util, cop);
 	assert_int_equal(0, ret);
 
-	ret = tc_init(&tc_rx,
-	              0, max_sdu_size, max_fdu_size,
-	              rx_max_fifo_size,
-	              0, 0, crc,
-	              seg, 0, 0,
-	              util, cop);
+	ret = osdlp_tc_init(&tc_rx,
+	                    0, max_sdu_size, max_fdu_size,
+	                    rx_max_fifo_size,
+	                    0, 0, crc,
+	                    seg, 0, 0,
+	                    util, cop);
 	assert_int_equal(0, ret);
 
 
-	tc_pack(&tc_tx, tx_buf, data, 100);
+	osdlp_tc_pack(&tc_tx, tx_buf, data, 100);
 
-	tc_unpack(&tc_rx, tx_buf);
+	osdlp_tc_unpack(&tc_rx, tx_buf);
 
 	assert_int_equal(tc_tx.primary_hdr.bypass, tc_rx.primary_hdr.bypass);
 	assert_int_equal(tc_tx.primary_hdr.spacecraft_id,

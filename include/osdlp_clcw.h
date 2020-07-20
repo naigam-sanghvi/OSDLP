@@ -17,8 +17,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_CLCW_H_
-#define INCLUDE_CLCW_H_
+#ifndef INCLUDE_OSDLP_CLCW_H_
+#define INCLUDE_OSDLP_CLCW_H_
 
 #include <stdint.h>
 
@@ -65,9 +65,9 @@ struct clcw_frame {
 };
 
 void
-clcw_pack(struct clcw_frame *clcw_params, uint8_t *buffer);
+osdlp_clcw_pack(struct clcw_frame *clcw_params, uint8_t *buffer);
 
 void
-clcw_unpack(struct clcw_frame *clcw_params, uint8_t *buffer);
+osdlp_clcw_unpack(struct clcw_frame *clcw_params, uint8_t *buffer);
 
-#endif /* INCLUDE_CLCW_H_ */
+#endif /* INCLUDE_OSDLP_CLCW_H_ */
