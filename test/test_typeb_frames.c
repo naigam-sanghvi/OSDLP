@@ -97,31 +97,33 @@ test_simple_bd_frame(void **state)
 	int tc_tx_ret;
 	int tc_rx_ret;
 
-	notif = initiate_no_clcw(&tc_tx);               /* Initiate service*/
+	notif = osdlp_initiate_no_clcw(&tc_tx);               /* Initiate service*/
 	assert_int_equal(notif, POSITIVE_DIR);
 	uint8_t buf[100];
 	for (int i = 0; i < 100; i++) {
 		buf[i] = i;
 	}
-	prepare_typeb_data_frame(&tc_tx, buf, 100);
+	osdlp_prepare_typeb_data_frame(&tc_tx, buf, 100);
 
-	tc_tx_ret = tc_transmit(&tc_tx, buf, 100);            /* Transmit packet */
+	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf,
+	                              100);            /* Transmit packet */
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 	assert_int_equal(1, uplink_channel.inqueue);
 	memcpy(temp, tc_tx.mission.util.buffer, 110);	/* Transmit 2nd packet */
-	tc_tx_ret = tc_transmit(&tc_tx, buf, 100);
+	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, 100);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
 	assert_int_equal(2, uplink_channel.inqueue);
 
 	dequeue(&uplink_channel, test_util);
-	tc_rx_ret = tc_receive(test_util,
-	                       TC_MAX_FRAME_LEN);    /* Receive first packet*/
+	tc_rx_ret = osdlp_tc_receive(test_util,
+	                             TC_MAX_FRAME_LEN);    /* Receive first packet*/
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 
 	dequeue(&uplink_channel, test_util);
-	tc_rx_ret = tc_receive(test_util, TC_MAX_FRAME_LEN);    /* Receive 2nd packet*/
+	tc_rx_ret = osdlp_tc_receive(test_util,
+	                             TC_MAX_FRAME_LEN);    /* Receive 2nd packet*/
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
 	assert_int_equal(2, rx_queues[1].inqueue);
 }
@@ -181,25 +183,25 @@ test_unlock_cmd(void **state)
 
 	int ret;
 	notification_t notif;
-	notif = initiate_no_clcw(&tc_tx);
+	notif = osdlp_initiate_no_clcw(&tc_tx);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	prepare_typeb_unlock(&tc_tx);
-	ret = transmit_type_bc(&tc_tx);
+	osdlp_prepare_typeb_unlock(&tc_tx);
+	ret = osdlp_transmit_type_bc(&tc_tx);
 	assert_int_equal(0, ret);
 	assert_int_equal(1, uplink_channel.inqueue);
 
-	prepare_typeb_setvr(&tc_tx, 66);
-	ret = transmit_type_bc(&tc_tx);
+	osdlp_prepare_typeb_setvr(&tc_tx, 66);
+	ret = osdlp_transmit_type_bc(&tc_tx);
 	assert_int_equal(0, ret);
 
 	ret = dequeue(&uplink_channel, test_util);
-	ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(0, ret);
 	assert_int_equal(1, tc_rx.cop_cfg.farm.farmb_cnt);
 
 	ret = dequeue(&uplink_channel, test_util);
-	ret = tc_receive(test_util, TC_MAX_FRAME_LEN);
+	ret = osdlp_tc_receive(test_util, TC_MAX_FRAME_LEN);
 	assert_int_equal(0, ret);
 	assert_int_equal(2, tc_rx.cop_cfg.farm.farmb_cnt);
 

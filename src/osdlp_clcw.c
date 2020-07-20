@@ -17,10 +17,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "clcw.h"
+#include "osdlp_clcw.h"
 
 void
-clcw_pack(struct clcw_frame *clcw_params, uint8_t *packet)
+osdlp_clcw_pack(struct clcw_frame *clcw_params, uint8_t *packet)
 {
 	packet[0] 	= ((clcw_params->ctrl_word_type & 0x01) << 7);
 	packet[0] 	|= ((clcw_params->clcw_version_num & 0x03) << 5);
@@ -42,7 +42,7 @@ clcw_pack(struct clcw_frame *clcw_params, uint8_t *packet)
 }
 
 void
-clcw_unpack(struct clcw_frame *clcw_params, uint8_t *packet)
+osdlp_clcw_unpack(struct clcw_frame *clcw_params, uint8_t *packet)
 {
 	clcw_params->ctrl_word_type = ((packet[0] >> 7) & 0x01);
 	clcw_params->clcw_version_num = ((packet[0] >> 5) & 0x03);

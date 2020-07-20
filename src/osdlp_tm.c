@@ -17,29 +17,28 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "tm.h"
-
 #include <stdlib.h>
 #include <string.h>
+#include "osdlp_tm.h"
 
 int
-tm_init(struct tm_transfer_frame *tm_tf,
-        uint16_t spacecraft_id,
-        uint8_t *mc_count,
-        uint8_t vcid,
-        tm_ocf_flag_t ocf_flag,
-        tm_ocf_type_t ocf_type,
-        tm_sec_hdr_flag_t sec_hdr_fleg,
-        tm_sync_flag_t sync_flag,
-        uint8_t sec_hdr_len,
-        uint8_t *sec_hdr,
-        tm_crc_flag_t crc_flag,
-        uint16_t frame_size,
-        uint16_t max_sdu_len,
-        uint16_t max_vcs,
-        uint16_t max_fifo_size,
-        tm_stuff_state_t stuffing,
-        uint8_t *util_buffer)
+osdlp_tm_init(struct tm_transfer_frame *tm_tf,
+              uint16_t spacecraft_id,
+              uint8_t *mc_count,
+              uint8_t vcid,
+              tm_ocf_flag_t ocf_flag,
+              tm_ocf_type_t ocf_type,
+              tm_sec_hdr_flag_t sec_hdr_fleg,
+              tm_sync_flag_t sync_flag,
+              uint8_t sec_hdr_len,
+              uint8_t *sec_hdr,
+              tm_crc_flag_t crc_flag,
+              uint16_t frame_size,
+              uint16_t max_sdu_len,
+              uint16_t max_vcs,
+              uint16_t max_fifo_size,
+              tm_stuff_state_t stuffing,
+              uint8_t *util_buffer)
 {
 	if (frame_size <= TM_PRIMARY_HDR_LEN) {
 		return -1;
@@ -95,8 +94,8 @@ tm_init(struct tm_transfer_frame *tm_tf,
 }
 
 void
-tm_pack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out,
-        uint8_t *data_in, uint16_t length)
+osdlp_tm_pack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out,
+              uint8_t *data_in, uint16_t length)
 {
 	pkt_out[0] = ((tm_tf->primary_hdr.mcid.version_num & 0x03) << 6);
 	pkt_out[0] |= ((tm_tf->primary_hdr.mcid.spacecraft_id >> 4) & 0x3f);
@@ -136,7 +135,7 @@ tm_pack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out,
 		uint16_t crc = 0;
 		pkt_out[tm_tf->mission.frame_len - 2] = 0;
 		pkt_out[tm_tf->mission.frame_len - 1] = 0;
-		crc = calc_crc(pkt_out, tm_tf->mission.frame_len - 2);
+		crc = osdlp_calc_crc(pkt_out, tm_tf->mission.frame_len - 2);
 
 		pkt_out[tm_tf->mission.frame_len - 2] = (crc >> 8) & 0xff;
 		pkt_out[tm_tf->mission.frame_len - 1] = crc & 0xff;
@@ -152,7 +151,7 @@ tm_pack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out,
 }
 
 void
-tm_unpack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_in)
+osdlp_tm_unpack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_in)
 {
 	tm_tf->primary_hdr.mcid.version_num 	= ((pkt_in[0] >> 6) && 0x03);
 	tm_tf->primary_hdr.mcid.spacecraft_id 	= ((pkt_in[0] & 0x3f) << 4) | ((
@@ -192,7 +191,7 @@ pack_crc(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out)
 		uint16_t crc = 0;
 		pkt_out[tm_tf->mission.frame_len - 2] = 0;
 		pkt_out[tm_tf->mission.frame_len - 1] = 0;
-		crc = calc_crc(pkt_out, tm_tf->mission.frame_len - 2);
+		crc = osdlp_calc_crc(pkt_out, tm_tf->mission.frame_len - 2);
 
 		pkt_out[tm_tf->mission.frame_len - 2] = (crc >> 8) & 0xff;
 		pkt_out[tm_tf->mission.frame_len - 1] = crc & 0xff;
@@ -200,20 +199,20 @@ pack_crc(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out)
 }
 
 void
-abort_segmentation(struct tm_transfer_frame *tm_tf)
+osdlp_abort_segmentation(struct tm_transfer_frame *tm_tf)
 {
 	tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 	tm_tf->mission.util.buffered_length = 0;
 }
 
 void
-disable_packet_stuffing(struct tm_transfer_frame *tm_tf)
+osdlp_disable_packet_stuffing(struct tm_transfer_frame *tm_tf)
 {
 	tm_tf->mission.stuff_state = TM_STUFFING_OFF;
 }
 
 void
-enable_packet_stuffing(struct tm_transfer_frame *tm_tf)
+osdlp_enable_packet_stuffing(struct tm_transfer_frame *tm_tf)
 {
 	tm_tf->mission.stuff_state = TM_STUFFING_ON;
 }
@@ -242,9 +241,9 @@ eval_residue_len(struct tm_transfer_frame *tm_tf,
 		} else {
 			residue_len += first_hdr_ptr;
 			while (residue_len <= tm_tf->mission.max_data_len) {
-				ret = tm_get_packet_len(&pkt_len,
-				                        &last_pkt[tm_tf->mission.header_len + residue_len],
-				                        tm_tf->mission.max_data_len);
+				ret = osdlp_tm_get_packet_len(&pkt_len,
+				                              &last_pkt[tm_tf->mission.header_len + residue_len],
+				                              tm_tf->mission.max_data_len);
 				if (ret < 0) {
 					return 0;
 				}
@@ -303,8 +302,8 @@ handle_pkt_stuffing(struct tm_transfer_frame *tm_tf,
 }
 
 int
-tm_transmit(struct tm_transfer_frame *tm_tf,
-            uint8_t *data_in, uint16_t length)
+osdlp_tm_transmit(struct tm_transfer_frame *tm_tf,
+                  uint8_t *data_in, uint16_t length)
 {
 	int ret;
 	uint8_t vcid = tm_tf->mission.vcid;
@@ -321,10 +320,11 @@ tm_transmit(struct tm_transfer_frame *tm_tf,
 	}
 
 	/*Check if last packet in fifo has leftover space*/
-	if (!tm_tx_queue_empty(vcid) && tm_tf->mission.stuff_state == TM_STUFFING_ON
+	if (!osdlp_tm_tx_queue_empty(vcid)
+	    && tm_tf->mission.stuff_state == TM_STUFFING_ON
 	    && tm_tf->mission.util.loop_state == TM_LOOP_CLOSED) {
-		ret = tm_tx_queue_back(&last_pkt,
-		                       vcid);		// Get a pointer to the last packet in queue
+		ret = osdlp_tm_tx_queue_back(&last_pkt,
+		                             vcid);		// Get a pointer to the last packet in queue
 		if (ret < 0) {
 			residue_len = tm_tf->mission.max_data_len;
 		} else {
@@ -351,7 +351,7 @@ tm_transmit(struct tm_transfer_frame *tm_tf,
 			num_packets--;
 
 		}
-		tm_tx_commit_back(vcid);
+		osdlp_tm_tx_commit_back(vcid);
 	} else {
 		num_packets = (remaining_len) /
 		              tm_tf->mission.max_data_len;
@@ -394,11 +394,11 @@ tm_transmit(struct tm_transfer_frame *tm_tf,
 			tm_tf->primary_hdr.vc_frame_cnt = 0;
 		}
 
-		tm_pack(tm_tf, tm_tf->mission.util.buffer,
-		        &data_in[length - remaining_len], bytes_avail);
+		osdlp_tm_pack(tm_tf, tm_tf->mission.util.buffer,
+		              &data_in[length - remaining_len], bytes_avail);
 
 		num_packets--;
-		ret = tm_tx_queue_enqueue(tm_tf->mission.util.buffer, vcid);
+		ret = osdlp_tm_tx_queue_enqueue(tm_tf->mission.util.buffer, vcid);
 		if (ret < 0) {
 			tm_tf->mission.util.loop_state = TM_LOOP_OPEN;
 			tm_tf->mission.util.buffered_length = length - remaining_len;
@@ -416,7 +416,8 @@ handle_ns_ptr_zero(struct tm_transfer_frame *tm_tf)
 {
 	int ret;
 	uint16_t length;
-	ret = tm_get_packet_len(&length, tm_tf->data, tm_tf->mission.max_data_len);
+	ret = osdlp_tm_get_packet_len(&length, tm_tf->data,
+	                              tm_tf->mission.max_data_len);
 	if (ret < 0) {
 		return TM_RX_ERROR;
 	}
@@ -432,7 +433,8 @@ handle_ns_ptr_zero(struct tm_transfer_frame *tm_tf)
 		       sizeof(uint8_t));
 		tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 		tm_tf->mission.util.buffered_length = 0;
-		ret = tm_rx_queue_enqueue(tm_tf->mission.util.buffer, tm_tf->mission.vcid);
+		ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
+		                                tm_tf->mission.vcid);
 		if (ret < 0) {
 			return TM_RX_DENIED;
 		}
@@ -467,8 +469,8 @@ handle_ns_ptr_positive(struct tm_transfer_frame *tm_tf)
 		    == tm_tf->mission.util.expected_pkt_len) {
 			tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 			tm_tf->mission.util.buffered_length = 0;
-			ret = tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-			                          tm_tf->mission.vcid);
+			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
+			                                tm_tf->mission.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -511,8 +513,8 @@ handle_s_ptr_zero(struct tm_transfer_frame *tm_tf)
 			tm_tf->mission.util.expected_pkt_len = 0;
 			return TM_RX_OK;
 		}
-		ret = tm_get_packet_len(&length, &tm_tf->data[bytes_explored],
-		                        (tm_tf->mission.max_data_len - bytes_explored));
+		ret = osdlp_tm_get_packet_len(&length, &tm_tf->data[bytes_explored],
+		                              (tm_tf->mission.max_data_len - bytes_explored));
 		if (ret < 0) {
 			memcpy(tm_tf->mission.util.buffer, &tm_tf->data[bytes_explored],
 			       (tm_tf->mission.max_data_len - bytes_explored) * sizeof(uint8_t));
@@ -537,7 +539,8 @@ handle_s_ptr_zero(struct tm_transfer_frame *tm_tf)
 			tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 			tm_tf->mission.util.buffered_length = 0;
 			tm_tf->mission.util.expected_pkt_len = 0;
-			ret = tm_rx_queue_enqueue(tm_tf->mission.util.buffer, tm_tf->mission.vcid);
+			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
+			                                tm_tf->mission.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -566,9 +569,9 @@ handle_s_ptr_nopkt(struct tm_transfer_frame *tm_tf)
 		    tm_tf->mission.max_sdu_len) {
 			memcpy(&tm_tf->mission.util.buffer[tm_tf->mission.util.buffered_length],
 			       tm_tf->data, tm_tf->mission.max_data_len * sizeof(uint8_t));
-			ret = tm_get_packet_len(&length, tm_tf->mission.util.buffer,
-			                        (tm_tf->mission.max_data_len
-			                         + tm_tf->mission.util.buffered_length));
+			ret = osdlp_tm_get_packet_len(&length, tm_tf->mission.util.buffer,
+			                              (tm_tf->mission.max_data_len
+			                               + tm_tf->mission.util.buffered_length));
 		} else {
 			tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 			tm_tf->mission.util.buffered_length = 0;
@@ -583,8 +586,8 @@ handle_s_ptr_nopkt(struct tm_transfer_frame *tm_tf)
 				tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 				tm_tf->mission.util.buffered_length = 0;
 
-				ret = tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-				                          tm_tf->mission.vcid);
+				ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
+				                                tm_tf->mission.vcid);
 				if (ret < 0) {
 					return TM_RX_DENIED;
 				}
@@ -609,8 +612,8 @@ handle_s_ptr_nopkt(struct tm_transfer_frame *tm_tf)
 		    == tm_tf->mission.util.expected_pkt_len) {
 			tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 			tm_tf->mission.util.buffered_length = 0;
-			ret = tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-			                          tm_tf->mission.vcid);
+			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
+			                                tm_tf->mission.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -635,9 +638,9 @@ handle_s_ptr_positive(struct tm_transfer_frame *tm_tf)
 		    tm_tf->primary_hdr.status.first_hdr_ptr < tm_tf->mission.max_sdu_len) {
 			memcpy(&tm_tf->mission.util.buffer[tm_tf->mission.util.buffered_length],
 			       tm_tf->data, tm_tf->primary_hdr.status.first_hdr_ptr * sizeof(uint8_t));
-			ret = tm_get_packet_len(&length, tm_tf->mission.util.buffer,
-			                        (tm_tf->primary_hdr.status.first_hdr_ptr
-			                         + tm_tf->mission.util.buffered_length));
+			ret = osdlp_tm_get_packet_len(&length, tm_tf->mission.util.buffer,
+			                              (tm_tf->primary_hdr.status.first_hdr_ptr
+			                               + tm_tf->mission.util.buffered_length));
 		} else {
 			ret = -1;
 		}
@@ -646,8 +649,8 @@ handle_s_ptr_positive(struct tm_transfer_frame *tm_tf)
 			    + tm_tf->mission.util.buffered_length == length) {
 				tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 				tm_tf->mission.util.buffered_length = 0;
-				ret = tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-				                          tm_tf->mission.vcid);
+				ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
+				                                tm_tf->mission.vcid);
 				if (ret < 0) {
 					return TM_RX_DENIED;
 				}
@@ -666,8 +669,8 @@ handle_s_ptr_positive(struct tm_transfer_frame *tm_tf)
 			       tm_tf->data, tm_tf->primary_hdr.status.first_hdr_ptr * sizeof(uint8_t));
 			tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 			tm_tf->mission.util.buffered_length = 0;
-			ret = tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-			                          tm_tf->mission.vcid);
+			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
+			                                tm_tf->mission.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -681,8 +684,8 @@ handle_s_ptr_positive(struct tm_transfer_frame *tm_tf)
 			tm_tf->mission.util.expected_pkt_len = 0;
 			return TM_RX_OK;
 		}
-		ret = tm_get_packet_len(&length, &tm_tf->data[bytes_explored],
-		                        (tm_tf->mission.max_data_len - bytes_explored));
+		ret = osdlp_tm_get_packet_len(&length, &tm_tf->data[bytes_explored],
+		                              (tm_tf->mission.max_data_len - bytes_explored));
 		if (ret < 0) {
 			memcpy(tm_tf->mission.util.buffer, &tm_tf->data[bytes_explored],
 			       (tm_tf->mission.max_data_len - bytes_explored) * sizeof(uint8_t));
@@ -707,7 +710,8 @@ handle_s_ptr_positive(struct tm_transfer_frame *tm_tf)
 			tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 			tm_tf->mission.util.buffered_length = 0;
 			tm_tf->mission.util.expected_pkt_len = 0;
-			ret = tm_rx_queue_enqueue(tm_tf->mission.util.buffer, tm_tf->mission.vcid);
+			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
+			                                tm_tf->mission.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -740,16 +744,16 @@ handle_rx_stuffing(struct tm_transfer_frame *tm_tf)
 }
 
 int
-tm_receive(uint8_t *data_in)
+osdlp_tm_receive(uint8_t *data_in)
 {
 	tm_rx_result_t notif;
 	uint8_t vcid = (data_in[1] >> 1) & 0x07;
 	struct tm_transfer_frame *tm_tf;
-	int ret = tm_get_rx_config(&tm_tf, vcid);
+	int ret = osdlp_tm_get_rx_config(&tm_tf, vcid);
 	if (ret < 0) {
 		return -1;
 	}
-	tm_unpack(tm_tf, data_in);
+	osdlp_tm_unpack(tm_tf, data_in);
 	if (tm_tf->primary_hdr.status.first_hdr_ptr == TM_FIRST_HDR_PTR_OID) {
 		return TM_RX_OID;
 	}
@@ -762,13 +766,13 @@ tm_receive(uint8_t *data_in)
 }
 
 int
-tm_transmit_idle_fdu(struct tm_transfer_frame *tm_tf, uint8_t vcid)
+osdlp_tm_transmit_idle_fdu(struct tm_transfer_frame *tm_tf, uint8_t vcid)
 {
 	int ret;
 	tm_tf->primary_hdr.status.first_hdr_ptr = TM_FIRST_HDR_PTR_OID;
-	tm_pack(tm_tf, tm_tf->mission.util.buffer,
-	        NULL, 0);
-	ret = tm_tx_queue_enqueue(tm_tf->mission.util.buffer, vcid);
+	osdlp_tm_pack(tm_tf, tm_tf->mission.util.buffer,
+	              NULL, 0);
+	ret = osdlp_tm_tx_queue_enqueue(tm_tf->mission.util.buffer, vcid);
 	if (ret < 0) {
 		return -1;
 	}
