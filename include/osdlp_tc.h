@@ -320,25 +320,27 @@ osdlp_tc_get_rx_config(struct tc_transfer_frame **, uint16_t);
 /**
  * Enqueues an item on the rx queue
  * @param the buffer to be enqueued
+ * @param the length buffer to be enqueued
  * @param the vcid
  *
  * @return error code. Negative for error, zero or positive for success
  */
 __attribute__((weak))
 int
-osdlp_tc_rx_queue_enqueue(uint8_t *, uint16_t);
+osdlp_tc_rx_queue_enqueue(uint8_t *, uint32_t, uint16_t);
 
 /**
  * Enqueues an item on the rx queue even
  * if there is no space,
  * by deleting the tail item
  * @param the buffer to place the item
+ * @param the length buffer to be enqueued
  * @param the vcid
  *
  * @return error code. Negative for error, zero or positive for success
  */
 __attribute__((weak))
 int
-osdlp_tc_rx_queue_enqueue_now(uint8_t *, uint8_t);
+osdlp_tc_rx_queue_enqueue_now(uint8_t *, uint32_t, uint8_t);
 
 #endif /* INCLUDE_TC_H_ */
