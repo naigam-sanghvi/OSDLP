@@ -220,14 +220,14 @@ osdlp_tc_tx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
 }
 
 int
-osdlp_tc_rx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
+osdlp_tc_rx_queue_enqueue(uint8_t *buffer, uint32_t length, uint16_t vcid)
 {
 	int ret = enqueue(&rx_queues[vcid], buffer);
 	return ret;
 }
 
 int
-osdlp_tc_rx_queue_enqueue_now(uint8_t *buffer, uint8_t vcid)
+osdlp_tc_rx_queue_enqueue_now(uint8_t *buffer, uint32_t length, uint8_t vcid)
 {
 	int ret = enqueue(&rx_queues[vcid], buffer);
 	if (ret < 0) {

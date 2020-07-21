@@ -222,9 +222,13 @@ osdlp_tc_receive(uint8_t *rx_buffer, uint32_t length)
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					if (farm_ret == COP_ENQ) {
-						ret = osdlp_tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+						ret = osdlp_tc_rx_queue_enqueue(tc_tf->mission.util.buffer,
+						                                tc_tf->frame_data.data_len,
+						                                vcid);
 					} else {
-						ret = osdlp_tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+						ret = osdlp_tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer,
+						                                    tc_tf->frame_data.data_len,
+						                                    vcid);
 					}
 					tc_tf->mission.util.buffered_length = 0;
 					tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
@@ -264,9 +268,13 @@ osdlp_tc_receive(uint8_t *rx_buffer, uint32_t length)
 					       tc_tf->frame_data.data,
 					       tc_tf->frame_data.data_len * sizeof(uint8_t));
 					if (farm_ret == COP_ENQ) {
-						ret = osdlp_tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+						ret = osdlp_tc_rx_queue_enqueue(tc_tf->mission.util.buffer,
+						                                tc_tf->mission.util.buffered_length + tc_tf->frame_data.data_len,
+						                                vcid);
 					} else {
-						ret = osdlp_tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+						ret = osdlp_tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer,
+						                                    tc_tf->mission.util.buffered_length + tc_tf->frame_data.data_len,
+						                                    vcid);
 					}
 					tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
 					if (ret < 0) {
@@ -303,9 +311,13 @@ osdlp_tc_receive(uint8_t *rx_buffer, uint32_t length)
 			       tc_tf->frame_data.data,
 			       tc_tf->frame_data.data_len * sizeof(uint8_t));
 			if (farm_ret == COP_ENQ) {
-				ret = osdlp_tc_rx_queue_enqueue(tc_tf->mission.util.buffer, vcid);
+				ret = osdlp_tc_rx_queue_enqueue(tc_tf->mission.util.buffer,
+				                                tc_tf->frame_data.data_len,
+				                                vcid);
 			} else {
-				ret = osdlp_tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer, vcid);
+				ret = osdlp_tc_rx_queue_enqueue_now(tc_tf->mission.util.buffer,
+				                                    tc_tf->frame_data.data_len,
+				                                    vcid);
 			}
 			tc_tf->mission.util.buffered_length = 0;
 			tc_tf->mission.util.loop_state = TC_LOOP_CLOSED;
