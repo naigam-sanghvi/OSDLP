@@ -402,7 +402,7 @@ osdlp_tm_transmit(struct tm_transfer_frame *tm_tf,
 		if (ret < 0) {
 			tm_tf->mission.util.loop_state = TM_LOOP_OPEN;
 			tm_tf->mission.util.buffered_length = length - remaining_len;
-			return -1;
+			return ret;
 		}
 		remaining_len -= bytes_avail;
 	}
@@ -751,7 +751,7 @@ osdlp_tm_receive(uint8_t *data_in)
 	struct tm_transfer_frame *tm_tf;
 	int ret = osdlp_tm_get_rx_config(&tm_tf, vcid);
 	if (ret < 0) {
-		return -1;
+		return ret;
 	}
 	osdlp_tm_unpack(tm_tf, data_in);
 	if (tm_tf->primary_hdr.status.first_hdr_ptr == TM_FIRST_HDR_PTR_OID) {
@@ -774,7 +774,7 @@ osdlp_tm_transmit_idle_fdu(struct tm_transfer_frame *tm_tf, uint8_t vcid)
 	              NULL, 0);
 	ret = osdlp_tm_tx_queue_enqueue(tm_tf->mission.util.buffer, vcid);
 	if (ret < 0) {
-		return -1;
+		return ret;
 	}
 	return 0;
 }
