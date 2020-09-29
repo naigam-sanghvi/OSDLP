@@ -189,7 +189,7 @@ osdlp_tc_receive(uint8_t *rx_buffer, uint32_t length)
 	/* Delimiting */
 	uint16_t frame_len = (rx_buffer[2] & 0x03) << 8;
 	frame_len |= (rx_buffer[3] & 0xff);
-	if ((frame_len + 1) > length) {
+	if (((frame_len + 1) > length) || (length < TC_TRANSFER_FRAME_PRIMARY_HEADER)) {
 		return -TC_RX_FRAME_LEN_ERR;
 	}
 
@@ -204,7 +204,7 @@ osdlp_tc_receive(uint8_t *rx_buffer, uint32_t length)
 	osdlp_tc_unpack(tc_tf, rx_buffer);
 
 	ret = osdlp_frame_validation_check(tc_tf, rx_buffer);
-	if (ret) {
+	if (ret < 0) {
 		return -TC_RX_FRAME_VAL_ERR;
 	}
 
