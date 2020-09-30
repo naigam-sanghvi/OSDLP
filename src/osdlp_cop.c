@@ -468,6 +468,10 @@ osdlp_look_for_directive(struct tc_transfer_frame *tc_tf)
 			notif = osdlp_bc_reject(tc_tf);
 			return notif;
 		} else {
+			ret = osdlp_reset_rt_frame(&item, tc_tf->primary_hdr.vcid);
+			if (ret < 0) {
+				return UNDEF_ERROR;
+			}
 			notif = osdlp_bc_accept(tc_tf);
 			return notif;
 		}
