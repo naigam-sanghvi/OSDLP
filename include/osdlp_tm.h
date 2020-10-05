@@ -81,7 +81,8 @@ typedef enum {
 	TM_RX_PENDING       = 1,
 	TM_RX_ERROR         = 2,
 	TM_RX_OID           = 3,
-	TM_RX_DENIED        = 4
+	TM_RX_DENIED        = 4,
+	TM_RX_WRONG_CRC     = 5
 } tm_rx_result_t;
 
 struct tm_master_channel_id {

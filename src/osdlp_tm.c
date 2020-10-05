@@ -130,6 +130,13 @@ osdlp_tm_pack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out,
 		       tm_tf->ocf, 4 * sizeof(uint8_t));
 	}
 
+	/* Add idle packets */
+	if (length < tm_tf->mission.max_data_len) {
+		memset(&pkt_out[tm_tf->mission.header_len + length],
+		       TM_IDLE_PACKET,
+		       (tm_tf->mission.max_data_len - length) * sizeof(uint8_t));
+	}
+
 	/* Add CRC */
 	if (tm_tf->mission.crc_present == TM_CRC_PRESENT) {
 		uint16_t crc = 0;
@@ -142,12 +149,7 @@ osdlp_tm_pack(struct tm_transfer_frame *tm_tf, uint8_t *pkt_out,
 		tm_tf->crc = crc;
 	}
 
-	/* Add idle packets */
-	if (length < tm_tf->mission.max_data_len) {
-		memset(&pkt_out[tm_tf->mission.header_len + length],
-		       TM_IDLE_PACKET,
-		       (tm_tf->mission.max_data_len - length) * sizeof(uint8_t));
-	}
+
 }
 
 void
@@ -754,6 +756,10 @@ osdlp_tm_receive(uint8_t *data_in)
 		return ret;
 	}
 	osdlp_tm_unpack(tm_tf, data_in);
+	uint16_t crc = osdlp_calc_crc(data_in, tm_tf->mission.frame_len - 2);
+	if (crc != tm_tf->crc) {
+		return -TM_RX_WRONG_CRC;
+	}
 	if (tm_tf->primary_hdr.status.first_hdr_ptr == TM_FIRST_HDR_PTR_OID) {
 		return TM_RX_OID;
 	}
