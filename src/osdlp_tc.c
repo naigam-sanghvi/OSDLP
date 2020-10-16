@@ -427,22 +427,24 @@ osdlp_tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
 
 void
 osdlp_prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                               uint16_t len)
+                               uint16_t len, uint8_t mapid)
 {
 	tc_tf->primary_hdr.bypass = TYPE_A;
 	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
 	tc_tf->frame_data.data = buffer;
 	tc_tf->frame_data.data_len = len;
+	tc_tf->frame_data.seg_hdr.map_id = mapid;
 }
 
 void
 osdlp_prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                               uint16_t len)
+                               uint16_t len, uint8_t mapid)
 {
 	tc_tf->primary_hdr.bypass = TYPE_B;
 	tc_tf->primary_hdr.ctrl_cmd = TC_DATA;
 	tc_tf->frame_data.data = buffer;
 	tc_tf->frame_data.data_len = len;
+	tc_tf->frame_data.seg_hdr.map_id = mapid;
 }
 
 void

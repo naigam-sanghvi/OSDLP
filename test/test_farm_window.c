@@ -111,7 +111,7 @@ test_vr(void **state)
 	notif = osdlp_handle_clcw(&tc_tx, ocf);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 
 	/* Transmit two frames */
 	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
@@ -197,7 +197,7 @@ test_vr(void **state)
 	notif = osdlp_handle_clcw(&tc_tx, ocf);
 	assert_int_equal(notif, POSITIVE_DIR);
 
-	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 
 	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
@@ -239,7 +239,7 @@ test_vr(void **state)
 	/* Transmit a packet */
 
 	/* Set VS to 254 */
-	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 	tc_tx.cop_cfg.fop.vs = 255;	/*Inside positive window of FARM */
 	osdlp_tc_pack(&tc_tx, test_util, buf, size);
 	ret = osdlp_tc_tx_queue_enqueue(test_util, 1);
@@ -256,7 +256,7 @@ test_vr(void **state)
 
 
 	/* Set VS to 0 */
-	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 	tc_tx.cop_cfg.fop.vs = 0;	/*Inside positive window of FARM */
 	osdlp_tc_pack(&tc_tx, test_util, buf, size);
 	osdlp_tc_tx_queue_enqueue(test_util, 1);
@@ -273,7 +273,7 @@ test_vr(void **state)
 
 	/* Send two correct packets */
 	tc_tx.cop_cfg.fop.vs = 254;
-	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
 	assert_int_equal(tc_tx.cop_cfg.fop.signal, ACCEPT_TX);
@@ -291,7 +291,7 @@ test_vr(void **state)
 
 	/* Transmit a packet */
 
-	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 
 	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
@@ -310,7 +310,7 @@ test_vr(void **state)
 
 	/* Transmit a packet */
 
-	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 
 	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);
 	assert_int_equal(tc_tx_ret, TC_TX_OK);
@@ -344,7 +344,7 @@ test_vr(void **state)
 
 	/* Set VS to 0 */
 
-	osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 
 	tc_tx.cop_cfg.fop.vs = 0;	/*Inside positive window of FARM */
 	osdlp_tc_pack(&tc_tx, test_util, buf, size);

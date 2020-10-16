@@ -103,7 +103,7 @@ test_simple_bd_frame(void **state)
 	for (int i = 0; i < 100; i++) {
 		buf[i] = i;
 	}
-	osdlp_prepare_typeb_data_frame(&tc_tx, buf, 100);
+	osdlp_prepare_typeb_data_frame(&tc_tx, buf, 100, 0);
 
 	tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf,
 	                              100);            /* Transmit packet */

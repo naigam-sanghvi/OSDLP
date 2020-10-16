@@ -122,7 +122,7 @@ transmitter(void *vargp)
 				buf[1] = (size >> 8) & 0xff;
 				buf[2] = (size) & 0xff;
 				/* Prepare the frame */
-				osdlp_prepare_typea_data_frame(&tc_tx_unseg, buf, size);
+				osdlp_prepare_typea_data_frame(&tc_tx_unseg, buf, size, 0);
 
 				pthread_mutex_lock(&lock);
 				/* Transmit the frame */
@@ -188,7 +188,7 @@ transmitter(void *vargp)
 				buf[size - 1] = (total_packets & 0xff);
 				buf[1] = (size >> 8) & 0xff;
 				buf[2] = (size) & 0xff;
-				osdlp_prepare_typea_data_frame(&tc_tx, buf, size);
+				osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 
 				pthread_mutex_lock(&lock);
 				tc_tx_ret = osdlp_tc_transmit(&tc_tx, buf, size);

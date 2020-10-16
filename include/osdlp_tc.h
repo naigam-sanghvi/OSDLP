@@ -261,11 +261,11 @@ osdlp_tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 
 void
 osdlp_prepare_typea_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                               uint16_t len);
+                               uint16_t len, uint8_t mapid);
 
 void
 osdlp_prepare_typeb_data_frame(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
-                               uint16_t len);
+                               uint16_t len, uint8_t mapid);
 
 void
 osdlp_prepare_typeb_unlock(struct tc_transfer_frame *tc_tf);
