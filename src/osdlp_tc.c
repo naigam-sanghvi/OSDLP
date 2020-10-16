@@ -146,7 +146,7 @@ osdlp_tc_pack(struct tc_transfer_frame *tc_tf, uint8_t *pkt_out,
 	}
 	if (tc_tf->mission.seg_hdr_flag) {
 		pkt_out[5] = ((tc_tf->frame_data.seg_hdr.seq_flag & 0x03) << 6);
-		pkt_out[5] |= (tc_tf->frame_data.seg_hdr.map_id & 0x03);
+		pkt_out[5] |= (tc_tf->frame_data.seg_hdr.map_id & 0x3f);
 		memcpy(&pkt_out[6], data_in, length * sizeof(uint8_t));
 	} else {
 		memcpy(&pkt_out[5], data_in, length * sizeof(uint8_t));
