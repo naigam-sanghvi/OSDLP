@@ -4,7 +4,7 @@
 
 This is the open-source, OS-independent library that implements the following standards:
 
-[1] [CCSDS Space Packet](https://public.ccsds.org/Pubs/133x0b1c2.pdf)
+[1] [CCSDS Space Packet](https://public.ccsds.org/Pubs/133x0b2e1.pdf)
 
 [2] [CCSDS TM Space Data Link Protocol](https://public.ccsds.org/Pubs/132x0b2.pdf)
 

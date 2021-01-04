@@ -24,6 +24,6 @@
 #include "osdlp_cop.h"
 #include "osdlp_crc.h"
 #include "osdlp_tm.h"
-
+#include "osdlp_spp.h"
 
 #endif /* INCLUDE_OSDLP_H_ */

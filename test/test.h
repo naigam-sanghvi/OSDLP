@@ -84,6 +84,15 @@ void
 test_simple_ad_frame(void **state);
 
 void
+test_spp_hdr_only(void **state);
+
+void
+test_spp_hdr_with_data(void **state);
+
+void
+test_spp_invalid(void **state);
+
+void
 test_unlock_cmd(void **state);
 
 void
