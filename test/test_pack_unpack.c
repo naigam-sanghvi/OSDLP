@@ -32,7 +32,7 @@ test_tm(void **state)
 	struct tm_transfer_frame tm_rx;
 	uint8_t cnt 		= 0;
 	uint8_t vcid 		= 4;
-	uint8_t scid 		= 30;
+	uint8_t scid 		= 0;
 	tm_crc_flag_t crc 	= TM_CRC_PRESENT;
 	tm_ocf_flag_t ocf 	= TM_OCF_NOTPRESENT;
 	uint16_t frame_len 	= 300;
@@ -77,7 +77,7 @@ test_tc(void **state)
 	struct tc_transfer_frame tc_rx;
 	struct cop_config cop;
 	uint8_t vcid 			= 4;
-	uint8_t scid 			= 30;
+	uint8_t scid 			= 0;
 	uint8_t mapid 			= 20;
 	uint16_t max_sdu_size 	= 700;
 	uint16_t max_fdu_size 	= 500;

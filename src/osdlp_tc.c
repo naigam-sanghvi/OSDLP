@@ -376,7 +376,8 @@ osdlp_tc_transmit(struct tc_transfer_frame *tc_tf, uint8_t *buffer,
 		tc_tf->frame_data.data_len = bytes_avail;
 		tc_tf->frame_data.data = buffer + (length - remaining);
 
-		if (!osdlp_tc_tx_queue_full(tc_tf->primary_hdr.vcid)) {
+		if (!osdlp_tc_tx_queue_full(tc_tf->primary_hdr.spacecraft_id,
+		                            tc_tf->primary_hdr.vcid)) {
 			notif = osdlp_req_transfer_fdu(tc_tf);
 		} else {
 			tc_tf->cop_cfg.fop.signal = REJECT_TX;

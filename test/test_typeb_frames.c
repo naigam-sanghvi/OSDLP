@@ -24,7 +24,8 @@
 
 extern struct queue
 	uplink_channel;          /* Queue simulating uplink channel */
-extern struct queue  	           rx_queues[NUMVCS];       /* Receiving queue */
+extern struct queue
+	rx_queues[NUMSCS][NUMVCS];       /* Receiving queue */
 /* Config structs for the first VC*/
 extern struct tc_transfer_frame   tc_tx;
 extern struct tc_transfer_frame   tc_rx;
@@ -53,7 +54,7 @@ test_simple_bd_frame(void **state)
 	uint16_t      rx_item_size = TC_MAX_FRAME_LEN;
 	uint16_t      rx_capacity = 10;
 
-	uint16_t      scid = 101;
+	uint16_t      scid = 0;
 	uint16_t      max_frame_size = TC_MAX_FRAME_LEN;
 	uint16_t      rx_max_fifo_size = 10;
 	uint8_t       vcid = 1;
@@ -125,7 +126,7 @@ test_simple_bd_frame(void **state)
 	tc_rx_ret = osdlp_tc_receive(test_util,
 	                             TC_MAX_FRAME_LEN);    /* Receive 2nd packet*/
 	assert_int_equal(tc_rx_ret, TC_RX_OK);
-	assert_int_equal(2, rx_queues[1].inqueue);
+	assert_int_equal(2, rx_queues[scid][1].inqueue);
 }
 
 void
@@ -141,7 +142,7 @@ test_unlock_cmd(void **state)
 	uint16_t      rx_item_size = TC_MAX_FRAME_LEN;
 	uint16_t      rx_capacity = 10;
 
-	uint16_t      scid = 101;
+	uint16_t      scid = 0;
 	uint16_t      max_frame_size = TC_MAX_FRAME_LEN;
 	uint8_t       vcid = 1;
 	uint8_t       mapid = 1;

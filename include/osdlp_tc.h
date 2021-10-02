@@ -341,6 +341,6 @@ osdlp_tc_rx_queue_enqueue(uint8_t *, uint32_t, uint16_t);
  */
 __attribute__((weak))
 int
-osdlp_tc_rx_queue_enqueue_now(uint8_t *, uint32_t, uint8_t);
+osdlp_tc_rx_queue_enqueue_now(uint8_t *, uint32_t, uint16_t);
 
 #endif /* INCLUDE_TC_H_ */

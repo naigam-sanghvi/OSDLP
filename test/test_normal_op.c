@@ -43,7 +43,8 @@ extern struct queue
 	downlink_channel;        /* Queue simulating downlink channel */
 extern struct queue
 	uplink_channel;          /* Queue simulating uplink channel */
-extern struct queue  	           rx_queues[NUMVCS];       /* Receiving queue */
+extern struct queue
+	rx_queues[NUMSCS][NUMVCS];       /* Receiving queue */
 /* Config structs for the first VC*/
 extern struct tc_transfer_frame   tc_tx;
 extern struct tc_transfer_frame   tc_rx;
@@ -65,9 +66,9 @@ extern struct fop_config          fop_unseg;
 extern struct farm_config         farm_unseg;
 
 int
-tc_rx_queue_clear(uint16_t vcid)
+tc_rx_queue_clear(uint16_t scid, uint16_t vcid)
 {
-	reset_queue(&rx_queues[vcid]);
+	reset_queue(&rx_queues[scid][vcid]);
 	return 0;
 }
 
@@ -259,17 +260,19 @@ receiver(void *vargp)
 
 			ret = enqueue(&downlink_channel, test_util);
 			assert_int_equal(ret, 0);
-			if (rx_queues[1].inqueue == rx_queues[1].capacity) {
+			if (rx_queues[tc_rx.primary_hdr.spacecraft_id][1].inqueue ==
+			    rx_queues[tc_rx.primary_hdr.spacecraft_id][1].capacity) {
 				/* Handle the case where the RX queue is full*/
 				uint8_t *p;
 				uint16_t size;
-				for (int i = 0; i < rx_queues[1].inqueue; i++) {
-					p = (uint8_t *)get_element(&rx_queues[1], i);
+				for (int i = 0; i < rx_queues[tc_rx.primary_hdr.spacecraft_id][1].inqueue;
+				     i++) {
+					p = (uint8_t *)get_element(&rx_queues[tc_rx.primary_hdr.spacecraft_id][1], i);
 					size = ((p[1] << 8) | p[2]);
 					assert_int_equal(p[0], p[size - 1]);
 				}
-				packets_rxed += rx_queues[1].inqueue;
-				tc_rx_queue_clear(1);
+				packets_rxed += rx_queues[tc_rx.primary_hdr.spacecraft_id][1].inqueue;
+				tc_rx_queue_clear(tc_rx.primary_hdr.spacecraft_id, 1);
 				/*This function must be called after an rx_queue_full event,
 				 * to notify COP that it can resume operations and reset the
 				 * wait flag */
@@ -303,7 +306,7 @@ clcw_listener(void *vargp)
 		if (downlink_channel.inqueue != 0) {
 
 			struct queue_item it;
-			int ret = osdlp_get_first_ad_rt_frame(&it, 1);
+			int ret = osdlp_get_first_ad_rt_frame(&it, tc_tx.primary_hdr.spacecraft_id, 1);
 			ret = dequeue(&downlink_channel, clcw_buf);
 			assert_int_equal(ret, 0);
 			osdlp_clcw_unpack(&clcw, clcw_buf);
@@ -353,7 +356,7 @@ timer_thread(void *vargp)
 	return NULL;
 }
 int
-osdlp_timer_start(uint16_t vcid)
+osdlp_timer_start(uint16_t scid, uint16_t vcid)
 {
 	pthread_mutex_lock(&tlock);
 	if (timer_running) {
@@ -367,7 +370,7 @@ osdlp_timer_start(uint16_t vcid)
 }
 
 int
-osdlp_timer_cancel(uint16_t vcid)
+osdlp_timer_cancel(uint16_t scid, uint16_t vcid)
 {
 	if (timer_running) {
 		kill_timer = true;
@@ -433,7 +436,7 @@ test_operation(void **state)
 	uint16_t      rx_item_size = TC_MAX_SDU_SIZE;
 	uint16_t      rx_capacity = 10;
 
-	uint16_t      scid = 101;
+	uint16_t      scid = 0;
 	uint16_t      max_frame_size = TC_MAX_FRAME_LEN;
 	uint8_t       vcid = 1;
 	uint8_t       mapid = 1;
@@ -509,15 +512,15 @@ test_operation(void **state)
 	pthread_mutex_destroy(&tlock);
 	uint8_t *p;
 	uint16_t size = 0;
-	for (int i = 0; i < rx_queues[1].inqueue; i++) {
+	for (int i = 0; i < rx_queues[scid][1].inqueue; i++) {
 		size = 0;
-		p = (uint8_t *)get_element(&rx_queues[1], i);
+		p = (uint8_t *)get_element(&rx_queues[scid][1], i);
 		size = ((p[1] << 8) | p[2]);
 		assert_int_equal(p[0], p[size - 1]);
 	}
-	assert_int_equal(packets_rxed + rx_queues[1].inqueue,
+	assert_int_equal(packets_rxed + rx_queues[scid][1].inqueue,
 	                 total_packets);
-	assert_int_equal(rx_queues[0].inqueue,
+	assert_int_equal(rx_queues[scid][0].inqueue,
 	                 6);
 }
 

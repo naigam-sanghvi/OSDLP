@@ -356,7 +356,8 @@ int
 osdlp_alert(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	ret = osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
+	ret = osdlp_timer_cancel(tc_tf->primary_hdr.spacecraft_id,
+	                         tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -376,7 +377,8 @@ osdlp_alert(struct tc_transfer_frame *tc_tf)
 int
 osdlp_resume(struct tc_transfer_frame *tc_tf)
 {
-	int ret = osdlp_timer_start(tc_tf->primary_hdr.vcid);
+	int ret = osdlp_timer_start(tc_tf->primary_hdr.spacecraft_id,
+	                            tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -396,15 +398,19 @@ notification_t
 osdlp_look_for_fdu(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	if (!osdlp_tc_sent_queue_empty(tc_tf->primary_hdr.vcid)) {
+	if (!osdlp_tc_sent_queue_empty(tc_tf->primary_hdr.spacecraft_id,
+	                               tc_tf->primary_hdr.vcid)) {
 		struct queue_item item;
-		ret = osdlp_get_first_ad_rt_frame(&item, tc_tf->primary_hdr.vcid);
+		ret = osdlp_get_first_ad_rt_frame(&item, tc_tf->primary_hdr.spacecraft_id,
+		                                  tc_tf->primary_hdr.vcid);
 		if (ret >= 0) {
-			ret = osdlp_reset_rt_frame(&item, tc_tf->primary_hdr.vcid);
+			ret = osdlp_reset_rt_frame(&item, tc_tf->primary_hdr.spacecraft_id,
+			                           tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return UNDEF_ERROR;
 			}
-			ret = osdlp_tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.spacecraft_id,
+			                                tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -413,7 +419,8 @@ osdlp_look_for_fdu(struct tc_transfer_frame *tc_tf)
 	}
 	/*Perform checks in case window wraps around*/
 
-	if (!osdlp_tc_wait_queue_empty(tc_tf->primary_hdr.vcid)) {
+	if (!osdlp_tc_wait_queue_empty(tc_tf->primary_hdr.spacecraft_id,
+	                               tc_tf->primary_hdr.vcid)) {
 		if (tc_tf->cop_cfg.fop.nnr + tc_tf->cop_cfg.fop.slide_wnd >= 256) {
 			if (condition_fop_inwindow(tc_tf)) {
 				ret = osdlp_transmit_type_ad(tc_tf);
@@ -456,6 +463,7 @@ osdlp_look_for_directive(struct tc_transfer_frame *tc_tf)
 	int ret;
 	struct queue_item item;
 	ret = osdlp_tc_sent_queue_head(&item,
+	                               tc_tf->primary_hdr.spacecraft_id,
 	                               tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
@@ -463,12 +471,14 @@ osdlp_look_for_directive(struct tc_transfer_frame *tc_tf)
 	}
 	if (item.rt_flag == RT_FLAG_ON && item.type == TYPE_B) {
 		item.rt_flag = RT_FLAG_OFF;
-		ret = osdlp_tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.vcid);
+		ret = osdlp_tc_tx_queue_enqueue(item.fdu, tc_tf->primary_hdr.spacecraft_id,
+		                                tc_tf->primary_hdr.vcid);
 		if (ret < 0) {
 			notif = osdlp_bc_reject(tc_tf);
 			return notif;
 		} else {
-			ret = osdlp_reset_rt_frame(&item, tc_tf->primary_hdr.vcid);
+			ret = osdlp_reset_rt_frame(&item, tc_tf->primary_hdr.spacecraft_id,
+			                           tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return UNDEF_ERROR;
 			}
@@ -484,21 +494,24 @@ osdlp_transmit_type_ad(struct tc_transfer_frame *tc_tf)
 {
 	struct queue_item item;
 	struct tc_transfer_frame wait_item;
-	int ret = osdlp_tc_wait_queue_dequeue(&wait_item, tc_tf->primary_hdr.vcid);
+	int ret = osdlp_tc_wait_queue_dequeue(&wait_item,
+	                                      tc_tf->primary_hdr.spacecraft_id, tc_tf->primary_hdr.vcid);
 
 	osdlp_tc_pack(tc_tf, tc_tf->mission.util.buffer, wait_item.frame_data.data,
 	              wait_item.frame_data.data_len);
 
-	if (osdlp_tc_sent_queue_empty(tc_tf->primary_hdr.vcid)) {
+	if (osdlp_tc_sent_queue_empty(tc_tf->primary_hdr.spacecraft_id,
+	                              tc_tf->primary_hdr.vcid)) {
 		tc_tf->cop_cfg.fop.tx_cnt = 1;
 	}
-	osdlp_timer_start(tc_tf->primary_hdr.vcid);
+	osdlp_timer_start(tc_tf->primary_hdr.spacecraft_id, tc_tf->primary_hdr.vcid);
 
 	item.type = TYPE_A;
 	item.fdu = tc_tf->mission.util.buffer;
 	item.rt_flag = RT_FLAG_OFF;
 	item.seq_num = tc_tf->cop_cfg.fop.vs;
-	ret = osdlp_tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.spacecraft_id,
+	                                  tc_tf->primary_hdr.vcid);
 	tc_tf->cop_cfg.fop.vs = (tc_tf->cop_cfg.fop.vs + 1) % 256;
 
 	if (ret < 0) {
@@ -506,6 +519,7 @@ osdlp_transmit_type_ad(struct tc_transfer_frame *tc_tf)
 	}
 
 	ret = osdlp_tc_tx_queue_enqueue(tc_tf->mission.util.buffer,
+	                                tc_tf->primary_hdr.spacecraft_id,
 	                                tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
@@ -523,17 +537,19 @@ osdlp_transmit_type_bc(struct tc_transfer_frame *tc_tf)
 	tc_tf->cop_cfg.fop.tx_cnt = 1;
 	tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len +
 	                               tc_tf->frame_data.data_len - 1;
-	osdlp_timer_start(tc_tf->primary_hdr.vcid);
+	osdlp_timer_start(tc_tf->primary_hdr.spacecraft_id, tc_tf->primary_hdr.vcid);
 	item.type = TYPE_B;
 	item.fdu = tc_tf->mission.util.buffer;
 	item.rt_flag = RT_FLAG_OFF;
 	item.seq_num = tc_tf->cop_cfg.fop.vs;
-	ret = osdlp_tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_sent_queue_enqueue(&item, tc_tf->primary_hdr.spacecraft_id,
+	                                  tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
 
 	ret = osdlp_tc_tx_queue_enqueue(tc_tf->mission.util.buffer,
+	                                tc_tf->primary_hdr.spacecraft_id,
 	                                tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
@@ -551,6 +567,7 @@ osdlp_transmit_type_bd(struct tc_transfer_frame *tc_tf)
 	tc_tf->primary_hdr.frame_len = tc_tf->mission.fixed_overhead_len +
 	                               tc_tf->frame_data.data_len - 1;
 	ret = osdlp_tc_tx_queue_enqueue(tc_tf->mission.util.buffer,
+	                                tc_tf->primary_hdr.spacecraft_id,
 	                                tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
@@ -562,13 +579,15 @@ int
 osdlp_initiate_ad_retransmission(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	osdlp_cancel_lower_ops();
+	osdlp_cancel_lower_ops(tc_tf->primary_hdr.spacecraft_id);
 	tc_tf->cop_cfg.fop.tx_cnt = (tc_tf->cop_cfg.fop.tx_cnt + 1) % 256;
-	ret = osdlp_timer_start(tc_tf->primary_hdr.vcid);
+	ret = osdlp_timer_start(tc_tf->primary_hdr.spacecraft_id,
+	                        tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = osdlp_mark_ad_as_rt(tc_tf->primary_hdr.vcid);
+	ret = osdlp_mark_ad_as_rt(tc_tf->primary_hdr.spacecraft_id,
+	                          tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -579,13 +598,15 @@ int
 osdlp_initiate_bc_retransmission(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
-	osdlp_cancel_lower_ops();
+	osdlp_cancel_lower_ops(tc_tf->primary_hdr.spacecraft_id);
 	tc_tf->cop_cfg.fop.tx_cnt = (tc_tf->cop_cfg.fop.tx_cnt + 1) % 256;
-	ret = osdlp_timer_start(tc_tf->primary_hdr.vcid);
+	ret = osdlp_timer_start(tc_tf->primary_hdr.spacecraft_id,
+	                        tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = osdlp_mark_bc_as_rt(tc_tf->primary_hdr.vcid);
+	ret = osdlp_mark_bc_as_rt(tc_tf->primary_hdr.spacecraft_id,
+	                          tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -595,7 +616,8 @@ osdlp_initiate_bc_retransmission(struct tc_transfer_frame *tc_tf)
 int
 osdlp_purge_sent_queue(struct tc_transfer_frame *tc_tf)
 {
-	int ret = osdlp_tc_sent_queue_clear(tc_tf->primary_hdr.vcid);
+	int ret = osdlp_tc_sent_queue_clear(tc_tf->primary_hdr.spacecraft_id,
+	                                    tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -605,7 +627,8 @@ osdlp_purge_sent_queue(struct tc_transfer_frame *tc_tf)
 int
 osdlp_purge_wait_queue(struct tc_transfer_frame *tc_tf)
 {
-	int ret = osdlp_tc_wait_queue_clear(tc_tf->primary_hdr.vcid);
+	int ret = osdlp_tc_wait_queue_clear(tc_tf->primary_hdr.spacecraft_id,
+	                                    tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
@@ -619,12 +642,14 @@ osdlp_remove_acked_frames(struct tc_transfer_frame *tc_tf, uint8_t nr)
 	int ret;
 	uint16_t counter = 0;
 	while (1) {
-		ret = osdlp_tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
+		ret = osdlp_tc_sent_queue_head(&item, tc_tf->primary_hdr.spacecraft_id,
+		                               tc_tf->primary_hdr.vcid);
 		if (ret < 0) {
 			break;
 		}
 		if (item.seq_num != nr) {
-			ret = osdlp_tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.spacecraft_id,
+			                                  tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return -1;
 			}
@@ -646,13 +671,15 @@ osdlp_release_copy_of_bc(struct tc_transfer_frame *tc_tf)
 {
 	int ret;
 	struct queue_item item;
-	ret = osdlp_tc_sent_queue_head(&item, tc_tf->primary_hdr.vcid);
+	ret = osdlp_tc_sent_queue_head(&item, tc_tf->primary_hdr.spacecraft_id,
+	                               tc_tf->primary_hdr.vcid);
 	if (ret < 0) {
 		return -1;
 	}
 	/* Check that item in head is TYPE B*/
 	if ((item.type == TYPE_B)) {
-		ret = osdlp_tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.vcid);
+		ret = osdlp_tc_sent_queue_dequeue(&item, tc_tf->primary_hdr.spacecraft_id,
+		                                  tc_tf->primary_hdr.vcid);
 		if (ret < 0) {
 			return -1;
 		}
@@ -690,7 +717,7 @@ fop_e1(struct tc_transfer_frame *tc_tf)
 			return ALERT_SYNCH;
 		case FOP_STATE_INIT_NO_BC:
 			tc_tf->cop_cfg.fop.state = FOP_STATE_ACTIVE;
-			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
+			osdlp_timer_cancel(tc_tf->primary_hdr.spacecraft_id, tc_tf->primary_hdr.vcid);
 			tc_tf->cop_cfg.fop.signal = POSITIVE_DIR;
 			return POSITIVE_DIR;
 		case FOP_STATE_INIT_BC:
@@ -700,7 +727,7 @@ fop_e1(struct tc_transfer_frame *tc_tf)
 				return UNDEF_ERROR;
 			}
 			tc_tf->cop_cfg.fop.state = FOP_STATE_ACTIVE;
-			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
+			osdlp_timer_cancel(tc_tf->primary_hdr.spacecraft_id, tc_tf->primary_hdr.vcid);
 			tc_tf->cop_cfg.fop.signal = POSITIVE_DIR;
 			return POSITIVE_DIR;
 		case FOP_STATE_INIT:
@@ -726,7 +753,7 @@ fop_e2(struct tc_transfer_frame *tc_tf,
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
+			osdlp_timer_cancel(tc_tf->primary_hdr.spacecraft_id, tc_tf->primary_hdr.vcid);
 			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
@@ -741,7 +768,7 @@ fop_e2(struct tc_transfer_frame *tc_tf,
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
+			osdlp_timer_cancel(tc_tf->primary_hdr.spacecraft_id, tc_tf->primary_hdr.vcid);
 			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
@@ -756,7 +783,7 @@ fop_e2(struct tc_transfer_frame *tc_tf,
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			osdlp_timer_cancel(tc_tf->primary_hdr.vcid);
+			osdlp_timer_cancel(tc_tf->primary_hdr.spacecraft_id, tc_tf->primary_hdr.vcid);
 			notif = osdlp_look_for_fdu(tc_tf);
 			if (!(notif == IGNORE)) {
 				tc_tf->cop_cfg.fop.signal = notif;
@@ -1822,7 +1849,8 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 	int ret;
 	switch (tc_tf->cop_cfg.fop.state) {
 		case FOP_STATE_ACTIVE:
-			ret = osdlp_tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.spacecraft_id,
+			                                  tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1835,7 +1863,8 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_NO_WAIT:
-			ret = osdlp_tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.spacecraft_id,
+			                                  tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -1848,7 +1877,8 @@ fop_e19(struct tc_transfer_frame *tc_tf)
 				return tc_tf->cop_cfg.fop.signal;
 			}
 		case FOP_STATE_RT_WAIT:
-			ret = osdlp_tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.vcid);
+			ret = osdlp_tc_wait_queue_enqueue(tc_tf, tc_tf->primary_hdr.spacecraft_id,
+			                                  tc_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
@@ -2129,7 +2159,8 @@ osdlp_req_transfer_fdu(struct tc_transfer_frame *tc_tf)
 {
 	notification_t notif;
 	if (tc_tf->primary_hdr.bypass == TYPE_A) {
-		if (osdlp_tc_wait_queue_empty(tc_tf->primary_hdr.vcid)) {
+		if (osdlp_tc_wait_queue_empty(tc_tf->primary_hdr.spacecraft_id,
+		                              tc_tf->primary_hdr.vcid)) {
 			/*E19*/
 			notif = fop_e19(tc_tf);
 			return notif;
@@ -2224,7 +2255,7 @@ osdlp_initiate_with_clcw(struct tc_transfer_frame *tc_tf)
 				tc_tf->cop_cfg.fop.signal = UNDEF_ERROR;
 				return UNDEF_ERROR;
 			}
-			osdlp_timer_start(tc_tf->primary_hdr.vcid);
+			osdlp_timer_start(tc_tf->primary_hdr.spacecraft_id, tc_tf->primary_hdr.vcid);
 			tc_tf->cop_cfg.fop.state = FOP_STATE_INIT_NO_BC;
 			tc_tf->cop_cfg.fop.signal = ACCEPT_DIR;
 			return ACCEPT_DIR;

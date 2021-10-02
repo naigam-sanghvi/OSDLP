@@ -49,7 +49,7 @@ test_vr(void **state)
 	uint16_t      rx_item_size = TC_MAX_SDU_SIZE;
 	uint16_t      rx_capacity = 10;
 
-	uint16_t      scid = 101;
+	uint16_t      scid = 0;
 	uint16_t      max_frame_size = TC_MAX_FRAME_LEN;
 	uint8_t       vcid = 1;
 	uint8_t       mapid = 1;
@@ -242,7 +242,7 @@ test_vr(void **state)
 	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 	tc_tx.cop_cfg.fop.vs = 255;	/*Inside positive window of FARM */
 	osdlp_tc_pack(&tc_tx, test_util, buf, size);
-	ret = osdlp_tc_tx_queue_enqueue(test_util, 1);
+	ret = osdlp_tc_tx_queue_enqueue(test_util, tc_tx.primary_hdr.spacecraft_id, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
@@ -259,7 +259,7 @@ test_vr(void **state)
 	osdlp_prepare_typea_data_frame(&tc_tx, buf, size, 0);
 	tc_tx.cop_cfg.fop.vs = 0;	/*Inside positive window of FARM */
 	osdlp_tc_pack(&tc_tx, test_util, buf, size);
-	osdlp_tc_tx_queue_enqueue(test_util, 1);
+	osdlp_tc_tx_queue_enqueue(test_util, tc_tx.primary_hdr.spacecraft_id, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
@@ -331,7 +331,7 @@ test_vr(void **state)
 
 	tc_tx.cop_cfg.fop.vs = 255;	/*Inside negative window of FARM */
 	osdlp_tc_pack(&tc_tx, test_util, buf, size);
-	osdlp_tc_tx_queue_enqueue(test_util, 1);
+	osdlp_tc_tx_queue_enqueue(test_util, tc_tx.primary_hdr.spacecraft_id, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
@@ -348,7 +348,7 @@ test_vr(void **state)
 
 	tc_tx.cop_cfg.fop.vs = 0;	/*Inside positive window of FARM */
 	osdlp_tc_pack(&tc_tx, test_util, buf, size);
-	osdlp_tc_tx_queue_enqueue(test_util, 1);
+	osdlp_tc_tx_queue_enqueue(test_util, tc_tx.primary_hdr.spacecraft_id, 1);
 
 	ret = dequeue(&uplink_channel, test_util);
 	assert_int_equal(ret, 0);
