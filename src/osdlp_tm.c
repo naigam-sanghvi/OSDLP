@@ -59,7 +59,6 @@ osdlp_tm_init(struct tm_transfer_frame *tm_tf,
 	m.frame_len	                = frame_size;
 	m.max_vcs                   = max_vcs;
 	m.util.buffer               = util_buffer;
-	m.vcid                      = vcid;
 	m.util.buffered_length      = 0;
 	m.util.loop_state           = TM_LOOP_CLOSED;
 	m.util.expected_pkt_len     = 0;
@@ -308,7 +307,7 @@ osdlp_tm_transmit(struct tm_transfer_frame *tm_tf,
                   uint8_t *data_in, uint16_t length)
 {
 	int ret;
-	uint8_t vcid = tm_tf->mission.vcid;
+	uint8_t vcid = tm_tf->primary_hdr.vcid;
 	uint16_t residue_len = 0;
 	uint16_t bytes_avail = 0;
 	uint16_t num_packets = 0;
@@ -436,7 +435,8 @@ handle_ns_ptr_zero(struct tm_transfer_frame *tm_tf)
 		tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 		tm_tf->mission.util.buffered_length = 0;
 		ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-		                                tm_tf->mission.vcid);
+		                                tm_tf->primary_hdr.mcid.spacecraft_id,
+		                                tm_tf->primary_hdr.vcid);
 		if (ret < 0) {
 			return TM_RX_DENIED;
 		}
@@ -472,7 +472,8 @@ handle_ns_ptr_positive(struct tm_transfer_frame *tm_tf)
 			tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 			tm_tf->mission.util.buffered_length = 0;
 			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-			                                tm_tf->mission.vcid);
+			                                tm_tf->primary_hdr.mcid.spacecraft_id,
+			                                tm_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -542,7 +543,8 @@ handle_s_ptr_zero(struct tm_transfer_frame *tm_tf)
 			tm_tf->mission.util.buffered_length = 0;
 			tm_tf->mission.util.expected_pkt_len = 0;
 			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-			                                tm_tf->mission.vcid);
+			                                tm_tf->primary_hdr.mcid.spacecraft_id,
+			                                tm_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -589,7 +591,8 @@ handle_s_ptr_nopkt(struct tm_transfer_frame *tm_tf)
 				tm_tf->mission.util.buffered_length = 0;
 
 				ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-				                                tm_tf->mission.vcid);
+				                                tm_tf->primary_hdr.mcid.spacecraft_id,
+				                                tm_tf->primary_hdr.vcid);
 				if (ret < 0) {
 					return TM_RX_DENIED;
 				}
@@ -615,7 +618,8 @@ handle_s_ptr_nopkt(struct tm_transfer_frame *tm_tf)
 			tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 			tm_tf->mission.util.buffered_length = 0;
 			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-			                                tm_tf->mission.vcid);
+			                                tm_tf->primary_hdr.mcid.spacecraft_id,
+			                                tm_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -652,7 +656,8 @@ handle_s_ptr_positive(struct tm_transfer_frame *tm_tf)
 				tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 				tm_tf->mission.util.buffered_length = 0;
 				ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-				                                tm_tf->mission.vcid);
+				                                tm_tf->primary_hdr.mcid.spacecraft_id,
+				                                tm_tf->primary_hdr.vcid);
 				if (ret < 0) {
 					return TM_RX_DENIED;
 				}
@@ -672,7 +677,8 @@ handle_s_ptr_positive(struct tm_transfer_frame *tm_tf)
 			tm_tf->mission.util.loop_state = TM_LOOP_CLOSED;
 			tm_tf->mission.util.buffered_length = 0;
 			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-			                                tm_tf->mission.vcid);
+			                                tm_tf->primary_hdr.mcid.spacecraft_id,
+			                                tm_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -713,7 +719,8 @@ handle_s_ptr_positive(struct tm_transfer_frame *tm_tf)
 			tm_tf->mission.util.buffered_length = 0;
 			tm_tf->mission.util.expected_pkt_len = 0;
 			ret = osdlp_tm_rx_queue_enqueue(tm_tf->mission.util.buffer,
-			                                tm_tf->mission.vcid);
+			                                tm_tf->primary_hdr.mcid.spacecraft_id,
+			                                tm_tf->primary_hdr.vcid);
 			if (ret < 0) {
 				return TM_RX_DENIED;
 			}
@@ -749,9 +756,12 @@ int
 osdlp_tm_receive(uint8_t *data_in)
 {
 	tm_rx_result_t notif;
+	uint16_t scid = ((data_in[0] & 0x3f) << 4) | ((
+	                        data_in[1] >> 4) & 0x0f);
 	uint8_t vcid = (data_in[1] >> 1) & 0x07;
+
 	struct tm_transfer_frame *tm_tf;
-	int ret = osdlp_tm_get_rx_config(&tm_tf, vcid);
+	int ret = osdlp_tm_get_rx_config(&tm_tf, scid, vcid);
 	if (ret < 0) {
 		return ret;
 	}

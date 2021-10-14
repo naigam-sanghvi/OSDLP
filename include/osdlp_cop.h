@@ -244,90 +244,100 @@ osdlp_bd_reject(struct tc_transfer_frame *tc_tf);
 /**
  * Enqueues an item on the wait queue
  * @param the buffer to enqueue
+ * @param the scid
  * @param the vcid
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_tc_wait_queue_enqueue(void *, uint16_t);
+osdlp_tc_wait_queue_enqueue(void *, uint16_t, uint16_t);
 
 /**
  * Dequeues an item from the wait queue
  * @param the buffer to hold the item
  * @param the vcid
+ * @param the vcid
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_tc_wait_queue_dequeue(void *, uint16_t);
+osdlp_tc_wait_queue_dequeue(void *, uint16_t, uint16_t);
 
 /**
  * Returns if the wait queue is empty
+ * @param the scid
  * @param the vcid
  *
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 bool
-osdlp_tc_wait_queue_empty(uint16_t);
+osdlp_tc_wait_queue_empty(uint16_t, uint16_t);
 
 /**
  * Clears the wait queue
+ * @param the scid
  * @param the vcid
+ *
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_tc_wait_queue_clear(uint16_t);
+osdlp_tc_wait_queue_clear(uint16_t, uint16_t);
 
 /**
  * Enqueues an item on the sent queue
  * @param the queue_item to enqueue
+ * @param the scid
  * @param the vcid
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_tc_sent_queue_enqueue(struct queue_item *, uint16_t);
+osdlp_tc_sent_queue_enqueue(struct queue_item *, uint16_t, uint16_t);
 
 
 /**
  * Dequeues an item from the sent queue
  * @param the queue_item to hold the item
+ * @param the scid
  * @param the vcid
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_tc_sent_queue_dequeue(struct queue_item *, uint16_t);
+osdlp_tc_sent_queue_dequeue(struct queue_item *, uint16_t, uint16_t);
 
 /**
  * Returns if the sent queue is empty
+ * @param the scid
  * @param the vcid
  */
 __attribute__((weak))
 bool
-osdlp_tc_sent_queue_empty(uint16_t);
+osdlp_tc_sent_queue_empty(uint16_t, uint16_t);
 
 /**
  * Clears the sent queue
+ * @param the scid
  * @param the vcid
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_tc_sent_queue_clear(uint16_t);
+osdlp_tc_sent_queue_clear(uint16_t, uint16_t);
 
 /**
  * Returns a pointer to the head of the sent
  * queue.
  * @param the pointer to the item of the queue
+ * @param the scid
  * @param the vcid
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_tc_sent_queue_head(struct queue_item *, uint16_t);
+osdlp_tc_sent_queue_head(struct queue_item *, uint16_t, uint16_t);
 
 
 /**
@@ -336,15 +346,16 @@ osdlp_tc_sent_queue_head(struct queue_item *, uint16_t);
  */
 __attribute__((weak))
 bool
-osdlp_tc_rx_queue_full(uint16_t);
+osdlp_tc_rx_queue_full(uint8_t);
 
 /**
  * Checks if tx queue is full
+ * @param the scid
  * @param the vcid
  */
 __attribute__((weak))
 bool
-osdlp_tc_tx_queue_full();
+osdlp_tc_tx_queue_full(uint16_t, uint16_t);
 
 /**
  * Enqueues an item on the tx queue.
@@ -352,81 +363,94 @@ osdlp_tc_tx_queue_full();
  * the higher layers to stop the flow
  * of packets if some error occurs.
  * @param the buffer to be enqueued
- * @return 0 or positive value for success, negative value otherwise
- */
-__attribute__((weak))
-int
-osdlp_tc_tx_queue_enqueue(uint8_t *, uint16_t);
-
-/**
- * Starts the timer
+ * @param the scid
  * @param the vcid
- * @return 0 or positive value for success, negative value otherwise
- */
-__attribute__((weak))
-int
-osdlp_timer_start(uint16_t);
-
-/**
- * Stops the timer
- * @param the vcid
- * @return 0 or positive value for success, negative value otherwise
- */
-__attribute__((weak))
-int
-osdlp_timer_cancel(uint16_t);
-
-/**
- * Cancels any ongoing operations on the
- * lower levels, eg purge the tx queue.
- * This is used to facilitate retransmissions
  *
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_cancel_lower_ops();
+osdlp_tc_tx_queue_enqueue(uint8_t *, uint16_t, uint16_t);
+
+/**
+ * Starts the timer
+ * @param the scid
+ * @param the vcid
+ *
+ * @return 0 or positive value for success, negative value otherwise
+ */
+__attribute__((weak))
+int
+osdlp_timer_start(uint16_t, uint16_t);
+
+/**
+ * Stops the timer
+ * @param the scid
+ * @param the vcid
+ *
+ * @return 0 or positive value for success, negative value otherwise
+ */
+__attribute__((weak))
+int
+osdlp_timer_cancel(uint16_t, uint16_t);
+
+/**
+ * Cancels any ongoing operations on the
+ * lower levels, eg purge the tx queue.
+ * This is used to facilitate retransmissions
+ * @param the scid
+ *
+ * @return 0 or positive value for success, negative value otherwise
+ */
+__attribute__((weak))
+int
+osdlp_cancel_lower_ops(uint16_t);
 
 /**
  * Marks all type_A queue_item structs on the
  * sent queue as 'to be retransmitted'
+ * @param the scid
  * @param the vcid
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_mark_ad_as_rt(uint16_t);
+osdlp_mark_ad_as_rt(uint16_t, uint16_t);
 
 /**
  * Marks the type_B queue_item struct on the
  * sent queue as 'to be retransmitted'
+ * @param the scid
  * @param the vcid
+ *
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_mark_bc_as_rt(uint16_t);
+osdlp_mark_bc_as_rt(uint16_t, uint16_t);
 
 /**
  * Resets the flag of the passed queue_item on
  * the sent queue
  * @param the queue_item to be reset
+ * @param the scid
  * @param the vcid
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_reset_rt_frame(struct queue_item *, uint16_t);
+osdlp_reset_rt_frame(struct queue_item *, uint16_t, uint16_t);
 
 /**
  * Fetches the first frame on the sent queue
  * with the retransmit flag on.
  * @param the queue_item that will be fetched
+ * @param the scid
  * @param the vcid
  * @return 0 or positive value for success, negative value otherwise
  */
 __attribute__((weak))
 int
-osdlp_get_first_ad_rt_frame(struct queue_item *, uint16_t);
+osdlp_get_first_ad_rt_frame(struct queue_item *, uint16_t, uint16_t);
 
 #endif /* INCLUDE_OSDLP_COP_H_ */

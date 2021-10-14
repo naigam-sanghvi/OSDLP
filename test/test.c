@@ -19,13 +19,13 @@
 
 #include "test.h"
 
-struct queue  	           wait_queues[NUMVCS];     /* Wait queue */
-struct queue	           sent_queues[NUMVCS];     /* Sent queue */
+struct queue  	           wait_queues[NUMSCS][NUMVCS];     /* Wait queue */
+struct queue	           sent_queues[NUMSCS][NUMVCS];     /* Sent queue */
 struct queue
 	downlink_channel;        /* Queue simulating downlink channel */
 struct queue
 	uplink_channel;          /* Queue simulating uplink channel */
-struct queue  	           rx_queues[NUMVCS];       /* Receiving queue */
+struct queue  	           rx_queues[NUMSCS][NUMVCS];       /* Receiving queue */
 /* Config structs for the first VC*/
 struct tc_transfer_frame   tc_tx;
 struct tc_transfer_frame   tc_rx;
@@ -57,64 +57,65 @@ struct tm_transfer_frame   tm_tx;
 struct tm_transfer_frame   tm_rx;
 struct queue  	           tx_queues[NUMVCS];     /* TM TX queues */
 
+
 uint16_t
-osdlp_tc_wait_queue_size(uint16_t vcid)
+osdlp_tc_wait_queue_size(uint16_t scid, uint16_t vcid)
 {
-	return wait_queues[vcid].inqueue;
+	return wait_queues[scid][vcid].inqueue;
 }
 
 int
-osdlp_tc_wait_queue_enqueue(void *tc_tf, uint16_t vcid)
+osdlp_tc_wait_queue_enqueue(void *tc_tf, uint16_t scid, uint16_t vcid)
 {
-	int ret = enqueue(&wait_queues[vcid], tc_tf);
+	int ret = enqueue(&wait_queues[scid][vcid], tc_tf);
 	return ret;
 }
 
 int
-osdlp_tc_wait_queue_dequeue(void *tc_tf, uint16_t vcid)
+osdlp_tc_wait_queue_dequeue(void *tc_tf, uint16_t scid, uint16_t vcid)
 {
-	int ret = dequeue(&wait_queues[vcid], tc_tf);
+	int ret = dequeue(&wait_queues[scid][vcid], tc_tf);
 	return ret;
 }
 
 bool
-osdlp_tc_wait_queue_empty(uint16_t vcid)
+osdlp_tc_wait_queue_empty(uint16_t scid, uint16_t vcid)
 {
-	return wait_queues[vcid].inqueue == 0 ? true : false;
+	return wait_queues[scid][vcid].inqueue == 0 ? true : false;
 }
 
 int
-osdlp_tc_wait_queue_clear(uint16_t vcid)
+osdlp_tc_wait_queue_clear(uint16_t scid, uint16_t vcid)
 {
-	int ret = reset_queue(&wait_queues[vcid]);
+	int ret = reset_queue(&wait_queues[scid][vcid]);
 	return ret;
 }
 
 int
-osdlp_tc_tx_queue_clear()
+osdlp_tc_tx_queue_clear(uint16_t scid, uint16_t vcid)
 {
 	int ret = reset_queue(&uplink_channel);
 	return ret;
 }
 
 int
-osdlp_tc_sent_queue_clear(uint16_t vcid)
+osdlp_tc_sent_queue_clear(uint16_t scid, uint16_t vcid)
 {
-	int ret = reset_queue(&sent_queues[vcid]);
+	int ret = reset_queue(&sent_queues[scid][vcid]);
 	return ret;
 }
 
 uint16_t
-tc_sent_queue_size(uint16_t vcid)
+tc_sent_queue_size(uint16_t scid, uint16_t vcid)
 {
-	return sent_queues[vcid].inqueue;
+	return sent_queues[scid][vcid].inqueue;
 }
 
 int
-osdlp_tc_sent_queue_dequeue(struct queue_item *qi, uint16_t vcid)
+osdlp_tc_sent_queue_dequeue(struct queue_item *qi, uint16_t scid, uint16_t vcid)
 {
 	struct local_queue_item new_item;
-	int ret = dequeue(&sent_queues[vcid], &new_item);
+	int ret = dequeue(&sent_queues[scid][vcid], &new_item);
 	qi->fdu = new_item.fdu;
 	qi->rt_flag = new_item.rt_flag;
 	qi->seq_num = new_item.seq_num;
@@ -123,7 +124,7 @@ osdlp_tc_sent_queue_dequeue(struct queue_item *qi, uint16_t vcid)
 }
 
 int
-osdlp_tc_sent_queue_enqueue(struct queue_item *qi, uint16_t vcid)
+osdlp_tc_sent_queue_enqueue(struct queue_item *qi, uint16_t scid, uint16_t vcid)
 {
 	uint16_t frame_len = (((qi->fdu[2] & 0x03) << 8) | qi->fdu[3]);
 	struct local_queue_item new_item;
@@ -131,28 +132,29 @@ osdlp_tc_sent_queue_enqueue(struct queue_item *qi, uint16_t vcid)
 	new_item.rt_flag = qi->rt_flag;
 	new_item.seq_num = qi->seq_num;
 	new_item.type = qi->type;
-	int ret = enqueue(&sent_queues[vcid], &new_item);
+	int ret = enqueue(&sent_queues[scid][vcid], &new_item);
 	return ret;
 }
 
 bool
-osdlp_tc_sent_queue_empty(uint16_t vcid)
+osdlp_tc_sent_queue_empty(uint16_t scid, uint16_t vcid)
 {
-	return sent_queues[vcid].inqueue == 0 ? true : false;
+	return sent_queues[scid][vcid].inqueue == 0 ? true : false;
 }
 
 bool
-osdlp_tc_sent_queue_full(uint16_t vcid)
+osdlp_tc_sent_queue_full(uint16_t scid, uint16_t vcid)
 {
-	return sent_queues[vcid].inqueue == sent_queues[vcid].capacity ? true : false;
+	return sent_queues[scid][vcid].inqueue == sent_queues[scid][vcid].capacity ?
+	       true : false;
 }
 
 int
-osdlp_tc_sent_queue_head(struct queue_item *qi, uint16_t vcid)
+osdlp_tc_sent_queue_head(struct queue_item *qi, uint16_t scid, uint16_t vcid)
 {
 	struct local_queue_item *item;
-	if (sent_queues[vcid].inqueue > 0) {
-		item = (struct local_queue_item *) front(&sent_queues[vcid]);
+	if (sent_queues[scid][vcid].inqueue > 0) {
+		item = (struct local_queue_item *) front(&sent_queues[scid][vcid]);
 		qi->fdu = item->fdu;
 		qi->rt_flag = item->rt_flag;
 		qi->seq_num = item->seq_num;
@@ -165,7 +167,7 @@ osdlp_tc_sent_queue_head(struct queue_item *qi, uint16_t vcid)
 }
 
 struct tc_transfer_frame *
-osdlp_tc_get_tx_config(uint16_t vcid)
+osdlp_tc_get_tx_config(uint16_t scid, uint16_t vcid)
 {
 	if (vcid == 1) {
 		return &tc_tx;
@@ -178,61 +180,40 @@ osdlp_tc_get_tx_config(uint16_t vcid)
 
 
 bool
-osdlp_tc_rx_queue_full(uint16_t vcid)
+osdlp_tc_rx_queue_full(uint8_t vcid)
 {
-	return rx_queues[vcid].inqueue == rx_queues[vcid].capacity ? true : false;
+	return rx_queues[0][vcid].inqueue == rx_queues[0][vcid].capacity ? true : false;
 }
 
 bool
-osdlp_tc_tx_queue_full()
+osdlp_tc_tx_queue_full(uint16_t scid, uint16_t vcid)
 {
 	return uplink_channel.inqueue == uplink_channel.capacity ? true : false;
 }
 
 int
-osdlp_tc_tx_queue_enqueue(uint8_t *buffer, uint16_t vcid)
+osdlp_tc_tx_queue_enqueue(uint8_t *buffer, uint16_t scid, uint16_t vcid)
 {
 	struct tc_transfer_frame *tc;
-	tc = (struct tc_transfer_frame *)osdlp_tc_get_tx_config(vcid);
+	tc = (struct tc_transfer_frame *)osdlp_tc_get_tx_config(scid, vcid);
 	int ret = enqueue(&uplink_channel, buffer);
-	if ((buffer[0] >> 5) & 0x01) {   // Type B
-		if ((buffer[0] >> 4) & 0x01) { // Control
-			if (ret < 0) {
-				osdlp_bc_reject(tc);
-			} else {
-				osdlp_bc_accept(tc);
-			}
-		} else {						// Data
-			if (ret < 0) {
-				osdlp_bd_reject(tc);
-			} else {
-				osdlp_bd_accept(tc);
-			}
-		}
-	} else { // Type A
-		if (ret < 0) {
-			osdlp_ad_reject(tc);
-		} else {
-			osdlp_ad_accept(tc);
-		}
-	}
 	return ret;
 }
 
 int
 osdlp_tc_rx_queue_enqueue(uint8_t *buffer, uint32_t length, uint16_t vcid)
 {
-	int ret = enqueue(&rx_queues[vcid], buffer);
+	int ret = enqueue(&rx_queues[0][vcid], buffer);
 	return ret;
 }
 
 int
-osdlp_tc_rx_queue_enqueue_now(uint8_t *buffer, uint32_t length, uint8_t vcid)
+osdlp_tc_rx_queue_enqueue_now(uint8_t *buffer, uint32_t length, uint16_t vcid)
 {
-	int ret = enqueue(&rx_queues[vcid], buffer);
+	int ret = enqueue(&rx_queues[0][vcid], buffer);
 	if (ret < 0) {
 		if (osdlp_tc_rx_queue_full(vcid)) {
-			ret = enqueue_now(&rx_queues[vcid], buffer);
+			ret = enqueue_now(&rx_queues[0][vcid], buffer);
 			return 0;
 		}
 	} else {
@@ -256,18 +237,18 @@ osdlp_tc_get_rx_config(struct tc_transfer_frame **tf, uint16_t vcid)
 }
 
 int
-osdlp_cancel_lower_ops()
+osdlp_cancel_lower_ops(uint16_t scid)
 {
-	int ret = osdlp_tc_tx_queue_clear();
+	int ret = osdlp_tc_tx_queue_clear(0, scid);
 	return ret;
 }
 
 int
-osdlp_mark_ad_as_rt(uint16_t vcid)
+osdlp_mark_ad_as_rt(uint16_t scid, uint16_t vcid)
 {
 	struct local_queue_item *item;
-	for (int i = 0; i < sent_queues[vcid].inqueue; i++) {
-		item = (struct local_queue_item *)get_element(&sent_queues[vcid], i);
+	for (int i = 0; i < sent_queues[scid][vcid].inqueue; i++) {
+		item = (struct local_queue_item *)get_element(&sent_queues[scid][vcid], i);
 		if (!item) {
 			return -1;
 		}
@@ -279,11 +260,11 @@ osdlp_mark_ad_as_rt(uint16_t vcid)
 }
 
 int
-osdlp_get_first_ad_rt_frame(struct queue_item *qi, uint16_t vcid)
+osdlp_get_first_ad_rt_frame(struct queue_item *qi, uint16_t scid, uint16_t vcid)
 {
 	struct local_queue_item *item;
-	for (int i = 0; i < sent_queues[vcid].inqueue; i++) {
-		item = (struct local_queue_item *)get_element(&sent_queues[vcid], i);
+	for (int i = 0; i < sent_queues[scid][vcid].inqueue; i++) {
+		item = (struct local_queue_item *)get_element(&sent_queues[scid][vcid], i);
 		if (!item) {
 			return -1;
 		}
@@ -299,11 +280,11 @@ osdlp_get_first_ad_rt_frame(struct queue_item *qi, uint16_t vcid)
 }
 
 int
-osdlp_reset_rt_frame(struct queue_item *qi, uint16_t vcid)
+osdlp_reset_rt_frame(struct queue_item *qi, uint16_t scid, uint16_t vcid)
 {
 	struct local_queue_item *item;
-	for (int i = 0; i < sent_queues[vcid].inqueue; i++) {
-		item = (struct local_queue_item *)get_element(&sent_queues[vcid], i);
+	for (int i = 0; i < sent_queues[scid][vcid].inqueue; i++) {
+		item = (struct local_queue_item *)get_element(&sent_queues[scid][vcid], i);
 		if (!item) {
 			return -1;
 		}
@@ -316,10 +297,10 @@ osdlp_reset_rt_frame(struct queue_item *qi, uint16_t vcid)
 }
 
 int
-osdlp_mark_bc_as_rt(uint16_t vcid)
+osdlp_mark_bc_as_rt(uint16_t scid, uint16_t vcid)
 {
 	struct queue_item *item;
-	item = (struct queue_item *)front(&sent_queues[vcid]);
+	item = (struct queue_item *)front(&sent_queues[scid][vcid]);
 	if (!item) {
 		return -1;
 	}
@@ -360,26 +341,28 @@ setup_queues(uint16_t up_chann_item_size,
 	           down_chann_item_size,
 	           down_chann_capacity);
 	assert_int_equal(ret, 0);
-	for (int i = 0; i < NUMVCS; i++) {
-		ret = init(&sent_queues[i],
-		           sent_item_size,
-		           sent_capacity);
-		assert_int_equal(ret, 0);
+	for (int j = 0; j < NUMSCS; j++) {
+		for (int i = 0; i < NUMVCS; i++) {
+			ret = init(&sent_queues[j][i],
+			           sent_item_size,
+			           sent_capacity);
+			assert_int_equal(ret, 0);
 
-		ret = init(&wait_queues[i],
-		           wait_item_size,
-		           1);
-		assert_int_equal(ret, 0);
+			ret = init(&wait_queues[j][i],
+			           wait_item_size,
+			           1);
+			assert_int_equal(ret, 0);
 
-		ret = init(&rx_queues[i],
-		           rx_item_size,
-		           rx_capacity);
-		assert_int_equal(ret, 0);
+			ret = init(&rx_queues[j][i],
+			           rx_item_size,
+			           rx_capacity);
+			assert_int_equal(ret, 0);
 
-		ret = init(&tx_queues[i],
-		           TM_FRAME_LEN,
-		           TM_TX_CAPACITY);
-		assert_int_equal(ret, 0);
+			ret = init(&tx_queues[i],
+			           TM_FRAME_LEN,
+			           TM_TX_CAPACITY);
+			assert_int_equal(ret, 0);
+		}
 	}
 	return 0;
 }

@@ -153,7 +153,7 @@ struct tm_mission_params {
 	uint8_t                     crc_present;		/* CRC present flag*/
 	uint16_t                    max_vcs;			/* Max number oc VCs allowed*/
 	uint16_t                    tx_fifo_max_size;	/* Max TX FIFO capacity*/
-	uint8_t                     vcid;
+	//uint8_t                     vcid;
 	uint8_t                     stuff_state;
 	uint8_t                     ocf_type;
 };
@@ -295,11 +295,12 @@ osdlp_tm_tx_queue_enqueue(uint8_t *, uint8_t);
 /**
  * Puts an item at the back of the RX queue
  * @param pointer to the memory space of the packet
+ * @param the scid
  * @param the vcid
  */
 __attribute__((weak))
 int
-osdlp_tm_rx_queue_enqueue(uint8_t *, uint8_t);
+osdlp_tm_rx_queue_enqueue(uint8_t *, uint16_t, uint8_t);
 
 /**
  * Returns the length of the packet pointed to by
@@ -318,11 +319,12 @@ int
 osdlp_tm_get_packet_len(uint16_t *, uint8_t *, uint16_t);
 
 /**
- * gets the TM config corresponding to the vcid
+ * gets the TM config corresponding to the mcid + vcid
+ * @param the scid
  * @param the vcid
  */
 __attribute__((weak))
 int
-osdlp_tm_get_rx_config(struct tm_transfer_frame **, uint8_t);
+osdlp_tm_get_rx_config(struct tm_transfer_frame **, uint16_t, uint8_t);
 
 #endif /* INCLUDE_TM_H_ */

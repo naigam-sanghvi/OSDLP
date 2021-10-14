@@ -32,6 +32,7 @@
 #include "queue_util.h"
 
 #define NUMVCS	           3
+#define NUMSCS	           1      /*Number of spacecrafts */
 #define TC_MAX_SDU_SIZE	   1024
 #define TM_TX_CAPACITY     10
 #define TC_MAX_FRAME_LEN   256
