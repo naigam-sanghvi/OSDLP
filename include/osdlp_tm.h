@@ -147,11 +147,11 @@ struct tm_mission_params {
 	uint16_t
 	header_len;			/* Header length - Including secondary if present*/
 	uint16_t
-	max_data_len;		/* Maximum allowed data size per FDU*/
+	max_data_len;		/* Maximum allowed data size per SDU*/
 	uint16_t
 	max_sdu_len;       /* Maximum size of higher layer frame*/
 	uint8_t                     crc_present;		/* CRC present flag*/
-	uint16_t                    max_vcs;			/* Max number oc VCs allowed*/
+	uint16_t                    max_vcs;			/* Max number of VCs allowed*/
 	uint16_t                    tx_fifo_max_size;	/* Max TX FIFO capacity*/
 	uint8_t                     vcid;
 	uint8_t                     stuff_state;
@@ -182,8 +182,10 @@ struct tm_transfer_frame {
  * if present
  * @param OCF value
  * @param crc_flag flag for the presence or not of CRC
- * @param frame_len Fixed frame length
- * @param max_vcs Max number oc VCs allowed
+ * @param frame_size Fixed frame length, must be larger or equal to TM_PRIMARY_HDR_LEN
+ * @param max_sdu_len Max Service Data Unit length
+ * @param max_vcs Max number of VCs allowed
+ * @param max_fifo_size Max FIFO capacity
  * @param stuffing Indicates if packet stuffing is on
  * @param util_buffer a utility buffer with size MAX_SDU_SIZE
  */
