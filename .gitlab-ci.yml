@@ -1,23 +1,37 @@
-image: debian:buster
+variables:
+  GITLAB_DEBIAN_CI_IMAGE: "debian:bookworm"
+  GITLAB_CI_LLVM_APT_REPOSITORY: "deb http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-17 main"
+  GIT_SUBMODULE_STRATEGY: recursive
+  GITLAB_CI_SIGN_OFF_EXCLUDE: '6f8cf446ca016971968775ae2d67c2a45d64cad7'
+  GIT_DEPTH: 1
+  ZEPHYR_SDK_VERSION: 0.15.2
 
 stages:
-  - style
+  - static
   - test
 
-test:
-  stage: test
-  before_script:
-    - apt-get update -qq && apt-get install -y -qq libcmocka0 libcmocka-dev gcovr cmake
-  script:
-    - make all
-    - make test
-    - make coverage
-style:
-  stage: style
-  before_script:
-    - apt-get update -qq && apt-get install -y -qq astyle git
-  script:
-    - if (test $(astyle --dry-run --options=.astylerc --formatted include/*.h | wc -l) -eq 0); then (exit 0); else (exit 1); fi
-    - if (test $(astyle --dry-run --options=.astylerc --formatted src/*.c | wc -l) -eq 0); then (exit 0); else (exit 1); fi
-    - if (test $(astyle --dry-run --options=.astylerc --formatted test/*.c | wc -l) -eq 0); then (exit 0); else (exit 1); fi
+include:
+  - project: 'librespacefoundation/templates/gitlab-ci'
+    ref: 'main'
+    file: '.gitlab-ci-sign-off.yml'
 
+sign_off:
+  stage: static
+  needs: []
+
+style:
+  image: ${GITLAB_DEBIAN_CI_IMAGE}
+  stage: static
+  needs: []
+  before_script:
+    - apt-get -q update
+    - apt-get -qy install gnupg libcurl4 wget
+    - echo "$GITLAB_CI_LLVM_APT_REPOSITORY" > /etc/apt/sources.list.d/llvm.list
+    - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+    - apt-get -q update
+    - apt-get -qy install clang-format-17 python3-pip
+    - pip install --break-system-packages -U cmake_format
+  script:
+    # - find src -iname '*.hpp' -o -iname '*.cpp' | xargs clang-format-17 --dry-run --style file --verbose --Werror -i
+    - find include -iname '*.hpp' | xargs clang-format-17 --dry-run --style file --verbose --Werror -i
+    - find . -name 'CMakeLists.txt' -print | xargs cmake-format --check --enable-sort=true --autosort=true
