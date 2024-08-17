@@ -26,6 +26,21 @@
 namespace osdlp
 {
 
+/**
+ * @brief The CCSDS Space Packet class
+ *
+ * This class implements the Space Packet PDU which is the basis of the Space
+ * Packet Protocol.
+ *
+ * The Space Packet consists from a fixed sized primary header, an optional
+ * variable-sized secondary header and a variable-sized user data field. The
+ * maximum size of the the Space Packet without the primary header must be less
+ * than 65536 bytes.
+ *
+ * \image html spp/spp.png
+ * \image latex spp/spp.png "Space Packet Structural Components
+ *
+ */
 class sp
 {
 public:
@@ -38,9 +53,9 @@ public:
    * is ‘000’.
    *
    */
-  enum class version_num : uint8_t
+  enum class version : uint8_t
   {
-    CCSDS_V1 = 0
+    CCSDS_V1 = 0 /*!< Version 1 CCSDS Packet */
   };
 
   /**
@@ -65,6 +80,8 @@ public:
    * -# Packet Identification Field (13 bits, mandatory);
    * -# Packet Sequence Control Field (16 bits, mandatory);
    * -# Packet Data Length (16 bits, mandatory).
+   * \image html spp/primary_hdr.png
+   * \image latex spp/primary_hdr.png "Packet Primary Header"
    */
   class primary_hdr
   {

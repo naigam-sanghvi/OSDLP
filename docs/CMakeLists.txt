@@ -1,5 +1,5 @@
 # ##############################################################################
-# Open Space Data Link Protocol
+# SatNOGS-COMMS MCU software
 #
 # Copyright (C) 2024, Libre Space Foundation <http://libre.space>
 #
@@ -19,26 +19,19 @@
 # SPDX-License-Identifier: GNU General Public License v3.0 or later
 # ##############################################################################
 
-cmake_minimum_required(VERSION 3.20)
+find_package(Doxygen)
 
-project(
-  osdlp
-  LANGUAGES C CXX
-  VERSION 1.0.0)
+option(BUILD_DOCS "Build documentation" ON)
+if(DOXYGEN_FOUND AND BUILD_DOCS)
 
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_C_STANDARD_REQUIRED True)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+  set(DOXYGEN_IN_FILE Doxyfile.in)
+  set(DOXYGEN_OUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+  configure_file(${DOXYGEN_IN_FILE} ${DOXYGEN_OUT_FILE} @ONLY)
 
-# Make IDEs happy
-set(CMAKE_EXPORT_COMPILE_COMMANDS true)
-if(CMAKE_EXPORT_COMPILE_COMMANDS)
-  set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES
-      ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
+  add_custom_target(
+    docs
+    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT_FILE}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMENT "Generating API documentation with Doxygen"
+    VERBATIM)
 endif()
-
-add_subdirectory(include/osdlp)
-add_subdirectory(src)
-add_subdirectory(test)
-add_subdirectory(docs)
