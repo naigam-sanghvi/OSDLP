@@ -25,3 +25,5 @@ target_include_directories(
   INTERFACE ${CMAKE_CURRENT_LIST_DIR}/../include
             # ${CMAKE_CURRENT_LIST_DIR}/../etl/include
             ${CMAKE_CURRENT_BINARY_DIR}/../include ${CMAKE_CURRENT_LIST_DIR})
+
+target_link_libraries(osdlp INTERFACE etl::etl)

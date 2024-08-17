@@ -38,6 +38,7 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
       ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
 endif()
 
+add_subdirectory(etl)
 add_subdirectory(include/osdlp)
 add_subdirectory(src)
 add_subdirectory(test)
