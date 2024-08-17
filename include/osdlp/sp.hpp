@@ -21,27 +21,31 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <etl/vector.h>
+#include <type_traits>
 
+/**
+ * @defgroup sp CCSDS Space Packet
+ *
+ * The CCSDS Space Packet implementation with the maximum Packet Data Field
+ * defined at compile time
+ *
+ * @ingroup osdlp
+ */
 namespace osdlp
 {
 
 /**
- * @brief The CCSDS Space Packet class
+ * @brief The base class of the Space Packet
+ * This is the base class of the Space Packet. Can be also used as a reference
+ * type, opposed to the osdlp::sp, which cannot due to the template
+ * requirements.
  *
- * This class implements the Space Packet PDU which is the basis of the Space
- * Packet Protocol.
- *
- * The Space Packet consists from a fixed sized primary header, an optional
- * variable-sized secondary header and a variable-sized user data field. The
- * maximum size of the the Space Packet without the primary header must be less
- * than 65536 bytes.
- *
- * \image html spp/spp.png
- * \image latex spp/spp.png "Space Packet Structural Components
- *
+ * @ingroup sp
  */
-class sp
+class isp
 {
 public:
   /**
@@ -72,6 +76,25 @@ public:
   };
 
   /**
+   * @brief Sequence Flags of the Primary Header
+   *
+   * @note The use of the Sequence Flags is not mandatory for the users of the
+   * SPP. However, the Sequence Flags may be used by the user of the Packet
+   * Service to indicate that the User Data contained within the Space Packet is
+   * a segment of a larger set of application data
+   */
+  enum class seq_flags : uint8_t
+  {
+    CONTINUATION =
+        0, /*!< the Space Packet contains a continuation segment of User Data */
+    FIRST_SEGMENT =
+        1, /*!< the Space Packet contains the first segment of User Data*/
+    LAST_SEGMENT =
+        2, /*!< the Space Packet contains the last segment of User Data */
+    UNSEGMENTED = 3 /*!< the Space Packet contains unsegmented User Data */
+  };
+
+  /**
    * @brief The SPP primary header
    *
    * The Packet Primary Header is mandatory and shall consist of four fields,
@@ -85,6 +108,12 @@ public:
    */
   class primary_hdr
   {
+  public:
+    /**
+     * @brief The size in bytes
+     *
+     */
+    static constexpr size_t len = 6;
   };
 
   /**
@@ -100,11 +129,164 @@ public:
    */
   class secondary_hdr
   {
+  public:
+    const uint8_t *
+    cbegin();
+    const uint8_t *
+    cend();
+
+    size_t
+    size() const;
+
+    bool
+    valid() const;
+
+  private:
   };
 
+protected:
+  isp(size_t max_pdf_len, size_t sec_hdr_len, etl::ivector<uint8_t> &buf)
+      : m_pdf_max_len(max_pdf_len), m_buf(buf), m_sec_hdr_len()
+  {
+  }
+
+  isp(size_t max_pdf_len, etl::ivector<uint8_t> &buf) : isp(max_pdf_len, 0, buf)
+  {
+  }
+
+  /**
+   * @brief Get the presence or absence of a Secondary Header in the Space
+   * Packet
+   *
+   * @return true if there is a secondary header
+   * @return false if there is no secondary header
+   */
+  bool
+  has_secondary_hdr() const
+  {
+    return m_sec_hdr_len > 0;
+  }
+
+  /**
+   * @brief Get the length of the Secondary Header
+   *
+   * @return size_t  the length of the Secondary Header or 0, if there is no
+   * secondary header
+   */
+  size_t
+  secondary_hdr_len()
+  {
+    return m_sec_hdr_len;
+  }
+
+  /**
+   * @brief Fills the PDF of the Space Packet with a specific value
+   *
+   * @param val the value to fill
+   *
+   * @note This method does not change the existing size of the PDF
+   */
+  void
+  fill_pdf(uint8_t val)
+  {
+    etl::fill(m_buf.begin() + primary_hdr::len, m_buf.end(), val);
+  }
+
+  /**
+   * @brief Fills the User Data Field (UDF) of the Space Packet with a specific
+   * value
+   *
+   * @param val the value to fill
+   *
+   * @note This method does not change the existing size of the PDF or the UDF
+   */
+  void
+  fill_udf(uint8_t val)
+  {
+    etl::fill(m_buf.begin() + primary_hdr::len + m_sec_hdr_len, m_buf.end(),
+              val);
+  }
+
+  /**
+   * @brief Checks if the SP is valid
+   *
+   * Checks if all mandatory internal fields of the SP and their requirements
+   * are met
+   *
+   * @return true
+   * @return false
+   */
+  bool
+  is_valid() const
+  {
+    return false;
+  }
+
 private:
-  uint16_t m_pd_length;
-  bool     m_has_secondary;
+  const size_t           m_pdf_max_len;
+  const size_t           m_sec_hdr_len;
+  etl::ivector<uint8_t> &m_buf;
+};
+
+/**
+ * @brief The CCSDS Space Packet class
+ *
+ * This class implements the Space Packet PDU which is the basis of the Space
+ * Packet Protocol.
+ *
+ * The Space Packet consists from a fixed sized primary header, an optional
+ * variable-sized secondary header and a variable-sized user data field. The
+ * maximum size of the the Space Packet without the primary header must be less
+ * than 65536 bytes.
+ *
+ * The OSDLP library supports the secondary size, however its size should be
+ * known at compile time.
+ *
+ * \image html spp/spp.png
+ * \image latex spp/spp.png "Space Packet Structural Components
+ *
+ * @tparam PDF_MAX_SIZE The maximum size of the Packet Data Field (PDF).
+ * @tparam SECONDARY_SIZE CCSDS SP may have a secondary header. Its size is
+ * mission specific and should be arranged beforehand. OSDLP supports the
+ * secondary header, but requires its size at compile time. If no secondary
+ * header is needed, set this parameter to 0.
+ *
+ * @ingroup sp
+ *
+ */
+template <const size_t PDF_MAX_SIZE, const size_t SECONDARY_SIZE = 0>
+class sp : public isp
+{
+public:
+  sp(version v, type t, uint16_t apid, seq_flags flags, uint16_t seq_cnt)
+      : isp(PDF_MAX_SIZE, m_buf)
+  {
+  }
+
+  /**
+   * @brief Construct an empty Space Packet
+   *
+   */
+  sp() : isp(PDF_MAX_SIZE, m_buf) {}
+
+  /**
+   * @brief Construct a Space Packet based on a given input byte stream
+   *
+   * @tparam IteratorT
+   * @tparam std::enable_if_t<std::is_same_v<
+   * typename std::iterator_traits<IteratorT>::value_type, uint8_t>>
+   * @param begin an iterator to the start of the byte stream
+   * @param end an iterator to the end of the byte stream
+   */
+  template <typename IteratorT,
+            typename = typename std::enable_if_t<std::is_same_v<
+                typename std::iterator_traits<IteratorT>::value_type, uint8_t>>>
+  sp(IteratorT begin, IteratorT end) : isp(PDF_MAX_SIZE, m_buf)
+  {
+  }
+
+private:
+  etl::vector<uint8_t, PDF_MAX_SIZE + primary_hdr::len> m_buf;
 };
 
 } // namespace osdlp
