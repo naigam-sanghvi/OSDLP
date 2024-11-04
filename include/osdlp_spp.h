@@ -17,17 +17,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_OSDLP_SPP_H_
+#ifndef INCLUDE_OSDLP_SPP_H_ /*N: Makes sure that this header file is included only once*/
 #define INCLUDE_OSDLP_SPP_H_
 
-#include <stddef.h>
-#include <stdint.h>
+#include <stddef.h> /*N: Defines integer types used in below code, specifically size_t, unsigned integer type used to represent sizes, mainly of arrays */
+#include <stdint.h> /*N: This defines integer types used in below code, specifically unit16_t and uint8_t, unsigned integer type of length 16 bit and 8 bit respectively*/
 
 /** Default SPP packet version number */
 #define SPP_PACKET_VERSION_NUMBER   0
 
 /** APID for idle packets */
-#define SPP_APID_IDLE   0x07FF
+#define SPP_APID_IDLE   0x07FF /*N: APID for Idle Packet is 11111111111 = 2047 in decimal and 0x07FF in hexadecimal*/
 
 /** Sequence flag values */
 #define SPP_SEQ_FLAG_CONTINUATION_SEGMENT   0 /**< continuation segment of user data */
@@ -35,7 +35,7 @@
 #define SPP_SEQ_FLAG_LAST_SEGMENT           2 /**< last segment of user data */
 #define SPP_SEQ_FLAG_UNSEGMENTED            3 /**< unsegmented usser data */
 
-/** SPP primary header */
+/** SPP primary header */ /*N:Can Integer type of some of the following be changed to unit8_t?*/
 struct spp_prim_hdr {
 	uint16_t version : 3; /**< packet version number */
 	uint16_t is_tc : 1; /**< packet type - 1 if TC, 0 if TM */
@@ -44,7 +44,7 @@ struct spp_prim_hdr {
 	uint16_t seq_flag : 2; /**< sequence flag */
 	uint16_t seq_count : 14; /**< packet sequence count or packet name */
 	uint16_t packet_data_len; /**< packet data length */
-} __attribute__((packed));
+} __attribute__((packed)); /*N: Attribute 'Packed' makes sure the data is packed bit wise continously and no padding of bits is added between fields*/
 
 /**
  * Packs SPP primary header (mandatory) and packet data (optional) into a buffer.
